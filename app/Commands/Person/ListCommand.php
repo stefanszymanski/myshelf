@@ -45,7 +45,7 @@ class ListCommand extends Command
             $select[] = $groupBy;
         }
 
-        $queryBuilder = $db->getPersons()->createQueryBuilder();
+        $queryBuilder = $db->persons()->createQueryBuilder();
 
         /* $queryBuilder->join(function($person) use ($db) { */
         /*     return $db->getBooks()->findBy(['authors', 'CONTAINS', $person['key']]); */
@@ -53,7 +53,6 @@ class ListCommand extends Command
         /* $select[] = 'books'; */
 
         $queryBuilder->select($select);
-        // TODO orderby doesn't work for virtual fields
         $queryBuilder->orderBy($orderBy);
 
 

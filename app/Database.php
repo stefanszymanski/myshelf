@@ -12,14 +12,19 @@ class Database
     {
     }
 
-    public function getPersons(): Store
+    public function persons(): Store
     {
         return $this->getStore('persons');
     }
 
-    public function getBooks(): Store
+    public function books(): Store
     {
         return $this->getStore('books');
+    }
+
+    public function publishers(): Store
+    {
+        return $this->getStore('publisher');
     }
 
     protected function getStore(string $name): Store

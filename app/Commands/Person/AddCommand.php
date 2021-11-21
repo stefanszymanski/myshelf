@@ -2,8 +2,8 @@
 
 namespace App\Commands\Person;
 
+use App\Console\Dialog\PersonDialog;
 use App\Database;
-use App\Utility\RecordUtility;
 use LaravelZero\Framework\Commands\Command;
 
 class AddCommand extends Command
@@ -29,16 +29,7 @@ class AddCommand extends Command
      */
     public function handle(Database $db)
     {
-        $firstname = $this->ask('First name?');
-        $lastname = $this->ask('Last name?');
-        $nationality = $this->ask('Nationality?');
-        $key = $this->ask('Key?', RecordUtility::createKey($firstname, $lastname));
-
-        $db->getPersons()->insert([
-            'key' => $key,
-            'firstname' => $firstname,
-            'lastname' => $lastname,
-            'nationality' => $nationality,
-        ]);
+        $personDialog = new PersonDialog($db, $this->input, $this->output, $this->verbosity);
+        $personDialog->createRecord();
     }
 }
