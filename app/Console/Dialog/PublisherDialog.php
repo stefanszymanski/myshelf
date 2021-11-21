@@ -44,13 +44,12 @@ class PublisherDialog extends AbstractRecordDialog
     public function createRecord(array $defaults = []): string
     {
         $name = $this->askMandatory('Name?', $defaults['name'] ?? null);
-        $key = $this->askForKey('Key?', $this->db->publishers(), RecordUtility::createKey($name));
+        $defaultKey = RecordUtility::createKey($name);
+        $key = $this->askForKey('Key?', $this->db->publishers(), $defaultKey);
         $this->db->publishers()->insert([
             'key' => $key,
             'name' => $name,
         ]);
         return $key;
-
     }
 }
-

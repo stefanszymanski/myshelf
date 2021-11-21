@@ -62,14 +62,10 @@ class PersonDialog extends AbstractRecordDialog
     {
         // Prompt for person data and persist.
         $firstname = $this->ask('First name?', $defaults['firstname'] ?? null);
-        /* $lastname = $this->ask('Last name?', $defaults['lastname'] ?? null); */
         $lastname = $this->askMandatory('Last name?', $defaults['lastname'] ?? null);
         $nationality = $this->ask('Nationality?');
-        $key = $this->askForKey(
-            'Key?',
-            $this->db->persons(),
-            RecordUtility::createKey($firstname, $lastname)
-        );
+        $defaultKey = RecordUtility::createKey($firstname, $lastname);
+        $key = $this->askForKey('Key?', $this->db->persons(), $defaultKey);
         $this->db->persons()->insert([
             'key' => $key,
             'firstname' => $firstname,

@@ -3,6 +3,8 @@
 namespace App\Console\Dialog;
 
 use App\Utility\RecordUtility;
+use App\Validator\IntegerValidator;
+use App\Validator\LooseDateValidator;
 
 class BookDialog extends AbstractRecordDialog
 {
@@ -43,7 +45,6 @@ class BookDialog extends AbstractRecordDialog
      */
     public function createRecord(array $defaults = []): string
     {
-
         $title = $this->askMandatory('Title?', $defaults['title'] ?? null);
 
         $personDialog = new PersonDialog($this->db, $this->input, $this->output, $this->verbosity);
@@ -51,16 +52,13 @@ class BookDialog extends AbstractRecordDialog
         $editors = $personDialog->askForMultiple('editor');
 
         $publisherDialog = new PublisherDialog($this->db, $this->input, $this->output, $this->verbosity);
-        $publisher = $publisherDialog->askForOne('publisher');
+        $publisher = $publisherDialog->askForOne('publisher', $defaults['publisher'] ?? null);
 
-        $published = $this->askForInteger('Published?', $defaults['published'] ?? null, false);
-        $acquired = $this->askForLooseDate('Acquired?', $defaults['acquired'] ?? null, false);
+        $published = $this->askWithValidation('Published?', [new IntegerValidator], $default['published'] ?? null);
+        $acquired = $this->askWithValidation('Acquired?', [new LooseDateValidator], $defaults['acquired'] ?? null);
 
-        $key = $this->askForKey(
-            'Key?',
-            $this->db->books(),
-            RecordUtility::createKey($authors[0] ?? $editors[0] ?? null, $title)
-        );
+        $defaultKey = RecordUtility::createKey($authors[0] ?? $editors[0] ?? null, $title);
+        $key = $this->askForKey('Key?', $this->db->books(), $defaultKey);
 
         $this->db->books()->insert([
             'key' => $key,
