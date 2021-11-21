@@ -47,19 +47,16 @@ class ListCommand extends Command
 
         $queryBuilder = $db->persons()->createQueryBuilder();
 
-        /* $queryBuilder->join(function($person) use ($db) { */
-        /*     return $db->getBooks()->findBy(['authors', 'CONTAINS', $person['key']]); */
-        /* }, 'books'); */
-        /* $select[] = 'books'; */
+        // TODO add virtual field for the number of books
+        $queryBuilder->join(function($person) use ($db) {
+            return $db->books()->findBy(['authors', 'CONTAINS', $person['key']]);
+        }, 'books');
+        $select['numberOfBooks'] = ['LENGTH' => 'books'];
 
         $queryBuilder->select($select);
         $queryBuilder->orderBy($orderBy);
 
-
-
         $persons = $queryBuilder->getQuery()->fetch();
-
-        var_dump($persons);
 
         $this->renderTable($fields, $persons, $groupBy);
     }

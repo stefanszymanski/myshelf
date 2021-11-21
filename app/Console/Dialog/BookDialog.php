@@ -57,6 +57,9 @@ class BookDialog extends AbstractRecordDialog
         $published = $this->askWithValidation('Published?', [new IntegerValidator], $default['published'] ?? null);
         $acquired = $this->askWithValidation('Acquired?', [new LooseDateValidator], $defaults['acquired'] ?? null);
 
+        // TODO store for lists
+        // TODO fields: condition, list.id, list.volume
+
         $defaultKey = RecordUtility::createKey($authors[0] ?? $editors[0] ?? null, $title);
         $key = $this->askForKey('Key?', $this->db->books(), $defaultKey);
 
