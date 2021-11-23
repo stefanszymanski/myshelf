@@ -37,15 +37,15 @@ class ListCommand extends Command
 
         // Validate arguments --fields, --orderby and --groupby
         $error = false;
-        if ($fields && $invalidFields = $this->type->checkFieldNames(...$fields)) {
+        if ($fields && $invalidFields = $this->type->checkFieldNames($fields)) {
             $this->error(sprintf('Argument --fields contains invalid fields: %s', implode(', ', $invalidFields)));
             $error = true;
         }
-        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(...array_keys($orderBy))) {
+        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(array_keys($orderBy))) {
             $this->error(sprintf('Argument --orderby contains invalid fields: %s', implode(', ', $invalidOrderFields)));
             $error = true;
         }
-        if ($groupBy && $this->type->checkFieldNames($groupBy)) {
+        if ($groupBy && $this->type->checkFieldNames([$groupBy])) {
             $this->error(sprintf('Argument --groupby is not a valid field name'));
             $error = true;
         }

@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
+use App\Configuration;
 use App\Database;
-use App\Domain\Repository\PersonRepository;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -29,5 +29,6 @@ class AppServiceProvider extends ServiceProvider
             $configuration = config('storage');
             return new Database($configuration['datadir'], $configuration['configuration']);
         });
+        $this->app->singleton(Configuration::class);
     }
 }

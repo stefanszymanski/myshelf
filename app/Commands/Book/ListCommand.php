@@ -3,8 +3,8 @@
 namespace App\Commands\Book;
 
 use App\Commands\ListCommandTrait;
+use App\Configuration;
 use App\Domain\Repository\BookRepository;
-use App\Domain\Type\Book;
 use LaravelZero\Framework\Commands\Command;
 
 class ListCommand extends Command
@@ -15,39 +15,35 @@ class ListCommand extends Command
                             {--fields=title,authors : Fields to display, separated by comma}
                             {--orderby= : Field names to order by, separated by comma, may be prefixed with a - for descending sorting}
                             {--groupby= : Field name to group by}
+                            {--filter=* : Filter expression}
     ';
 
     protected $description = 'List books';
-
-    public function __construct(
-        protected BookRepository $repository,
-        protected Book $type,
-    ) {
-        parent::__construct();
-    }
 
     /**
      * Execute the console command.
      *
      * @return mixed
      */
-    public function handle()
+    public function handle(BookRepository $repository, Configuration $configuration)
     {
+        $this->type = $configuration->getType('book');
+
         $fields = $this->getFields();
         $orderBy = $this->getOrderBy();
         $groupBy = $this->option('groupby');
 
         // Validate arguments --fields, --orderby and --groupby
         $error = false;
-        if ($fields && $invalidFields = $this->type->checkFieldNames(...$fields)) {
+        if ($fields && $invalidFields = $this->type->checkFieldNames($fields)) {
             $this->error(sprintf('Argument --fields contains invalid fields: %s', implode(', ', $invalidFields)));
             $error = true;
         }
-        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(...array_keys($orderBy))) {
+        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(array_keys($orderBy))) {
             $this->error(sprintf('Argument --orderby contains invalid fields: %s', implode(', ', $invalidOrderFields)));
             $error = true;
         }
-        if ($groupBy && $this->type->checkFieldNames($groupBy)) {
+        if ($groupBy && $this->type->checkFieldNames([$groupBy])) {
             $this->error(sprintf('Argument --groupby is not a valid field name'));
             $error = true;
         }
@@ -75,7 +71,20 @@ class ListCommand extends Command
             $hiddenFields[] = 'id';
         }
 
-        $records = $this->repository->find($fields, $orderBy);
+        // TODO move somewhere else. In general ... this whole method is the same as for persons. I think just one ListCommand is enough.
+        //      but I will wait. Maybe there will be differences
+        // TODO validate filter arguments
+        // Filters
+        $filters = [];
+        foreach ($this->option('filter') as $filter) {
+            // Supported operators are ~ = < > ! ?
+            if (preg_match('/^([a-z0-9.-]+)([~=<>!?]+)(.*)$/', $filter, $matches)) {
+                array_shift($matches);
+                $filters[] = $matches;
+            }
+        }
+
+        $records = $repository->find($fields, $orderBy, $filters);
 
         $this->renderTable($fields, $records, $hiddenFields, $groupBy);
     }

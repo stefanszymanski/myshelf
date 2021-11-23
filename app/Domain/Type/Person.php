@@ -3,6 +3,7 @@
 namespace App\Domain\Type;
 
 use App\Database;
+use SleekDB\QueryBuilder;
 
 class Person extends AbstractType
 {
@@ -12,38 +13,48 @@ class Person extends AbstractType
         $this
             ->registerField(
                 name: 'firstname',
-                label: 'First name'
+                label: 'First name',
+                type: self::FIELD_TYPE_REAL,
             )
             ->registerField(
                 name: 'lastname',
-                label: 'Last name'
+                label: 'Last name',
+                type: self::FIELD_TYPE_REAL,
             )
             ->registerField(
                 name: 'nationality',
-                label: 'Nationality'
+                label: 'Nationality',
+                type: self::FIELD_TYPE_REAL,
             )
 
-            ->registerVirtualField(
+            ->registerField(
                 name: 'name',
                 label: 'Full name',
+                type: self::FIELD_TYPE_VIRTUAL,
                 description: 'Last name and first name concatenated: `{lastname}, {firstname}`',
-                select: ['CONCAT' => [', ', 'lastname', 'firstname']]
+                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    return $qb->select([$fieldName => ['CONCAT' => [', ', 'lastname', 'firstname']]]);
+                }
             )
-            ->registerVirtualField(
+            ->registerField(
                 name: 'name2',
                 label: 'Full name',
+                type: self::FIELD_TYPE_VIRTUAL,
                 description: 'First name and last name concatenated: `{firstname} {lastname}`',
-                select: ['CONCAT' => [' ', 'firstname', 'lastname']]
+                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    return $qb->select([$fieldName => ['CONCAT' => [' ', 'firstname', 'lastname']]]);
+                }
             )
 
-            ->registerJoinField(
+            ->registerField(
                 name: 'books',
                 label: 'Books',
+                type: self::FIELD_TYPE_JOINED,
                 description: 'Number of books the person is an author of',
-                select: ['LENGTH' => '_books'],
-                joinAs: '_books',
-                join: function(Database $db) {
-                    return fn ($person) => $db->books()->findBy(['authors', 'CONTAINS', $person['key']]);
+                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    return $qb
+                        ->join(fn ($person) => $db->books()->findBy(['authors', 'CONTAINS', $person['key']]), '_books')
+                        ->select([$fieldName => ['LENGTH' => '_books']]);
                 }
             );
     }

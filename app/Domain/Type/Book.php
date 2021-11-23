@@ -3,54 +3,159 @@
 namespace App\Domain\Type;
 
 use App\Database;
+use SleekDB\QueryBuilder;
 
 class Book extends AbstractType
 {
     protected function configure(): void
     {
+        // Real fields
         $this
             ->registerField(
                 name: 'title',
-                label: 'Title'
+                label: 'Title',
+                type: self::FIELD_TYPE_REAL,
             )
             ->registerField(
                 name: 'published',
-                label: 'Published'
+                label: 'Published',
+                type: self::FIELD_TYPE_REAL,
             )
             ->registerField(
                 name: 'acquired',
-                label: 'Acquired'
-            )
+                label: 'Acquired',
+                type: self::FIELD_TYPE_REAL,
+            );
 
-            ->registerJoinField(
+        // Joined fields
+        $this
+            ->registerField(
+                name: 'publisher',
+                label: 'Publisher',
+                description: 'Name of the publisher',
+                type: self::FIELD_TYPE_JOINED,
+                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    return $qb
+                        ->join(fn ($book) => $db->publishers()->findBy(['key', '=', $book['publisher']]), '_publisher')
+                        ->select([$fieldName => '_publisher.0.name']);
+                },
+            )
+            ->registerField(
                 name: 'authors',
                 label: 'Authors',
                 description: 'Names of the authors',
-                select: function ($book) {
-                    $authors = array_map(fn ($author) => sprintf('%s %s', $author['firstname'], $author['lastname']), $book['_authors']);
-                    return implode(', ', $authors);
+                type: self::FIELD_TYPE_JOINED,
+                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    return $qb
+                        ->join(fn ($book) => $db->persons()->findBy(['key', 'IN', $book['authors']]), '_authors')
+                        ->select([$fieldName => function ($book) {
+                            $authors = array_map(fn ($author) => sprintf('%s %s', $author['firstname'], $author['lastname']), $book['_authors']);
+                            return implode('; ', $authors);
+                        }]);
                 },
-                joinAs: '_authors',
-                join: function (Database $db) {
-                    return fn ($book) => $db->persons()->findBy(['key', 'IN', $book['authors']]);
-                }
-            /* ) */
-            /* ->registerJoinField( */
-            /*     name: 'author', */
-            /*     label: 'Author', */
-            /*     description: 'Author name', */
-            /*     select: 'TODO', */
-            /*     joinAs: '_author', */
-            /*     join: function (Database $db) { */
-            /*         return function ($book) use ($db) { */
-            /*             $authors = $db->persons()->findBy(['key', 'IN', $book['authors']]); */
-            /*         }; */
-            /*     } */
             );
 
         // TODO add a author variant, that creates a record for each author of a book. That would be useful for grouping by.
         //      Otherwise grouping by "authors" would create separate groups for books with multiple authors.
 
-        // TODO evaluate what is needed to configure multi value fields for filtering. E.g. filter books by a specific author
+        // Filters on real fields
+        $this
+            ->registerSimpleFilter(
+                name: 'author',
+                operator: '=',
+                description: 'Exact match on a authors key',
+                filter: fn ($value) => ['authors', 'CONTAINS', $value]
+            )
+            ->registerSimpleFilter(
+                name: 'title',
+                operator: '=',
+                description: 'Exact match on the title',
+                filter: fn ($value) => ['title', '=', $value]
+            )
+            ->registerSimpleFilter(
+                name: 'title',
+                operator: '~',
+                description: 'Pattern match on the title',
+                filter: fn ($value) => ['title', 'LIKE', $value]
+            );
+
+        // Filters on publishing year
+        $operators = [
+            ['=', '==', 'equal'],
+            ['<', '<', 'less'],
+            ['>', '>', 'greater'],
+            ['<=', '<=', 'less or equal'],
+            ['>=', '>=', 'greater or equal'],
+        ];
+        foreach ($operators as list($operator, $internalOperator, $description)) {
+            $this->registerSimpleFilter(
+                name: 'published',
+                operator: $operator,
+                description: "Publishing year $description",
+                filter: fn ($value) => ['published', $internalOperator, $value],
+            );
+        }
+
+        // Joined filters on persons (authors and editors)
+        $personStore = fn (Database $db) => $db->getStore('persons');
+        $authorCriteria = fn (array $book) => ['key', 'IN', $book['authors']];
+        $editorCriteria = fn (array $book) => ['key', 'IN', $book['editors']];
+        $persons = [
+            ['author', 'an authors', $authorCriteria],
+            ['editor', 'an editors', $editorCriteria],
+        ];
+        foreach ($persons as list($field, $description, $store)) {
+            $this
+                ->registerJoinedStoreFilter(
+                    name: "$field.lastname",
+                    operator: '=',
+                    description: "Exact match on $description last name",
+                    foreignStore: $store,
+                    foreignCriteria: $authorCriteria,
+                    foreignField: 'lastname',
+                    foreignOperator: '=',
+                )
+                ->registerJoinedStoreFilter(
+                    name: "$field.lastname",
+                    operator: '~',
+                    description: "Pattern match on $description last name",
+                    foreignStore: $store,
+                    foreignCriteria: $authorCriteria,
+                    foreignField: 'lastname',
+                    foreignOperator: 'LIKE',
+                )
+                ->registerJoinedStoreFilter(
+                    name: "$field.name",
+                    operator: '~',
+                    description: "Pattern match on $description full name",
+                    foreignStore: $store,
+                    foreignCriteria: $authorCriteria,
+                    foreignField: fn (array $author) => sprintf('%s %s', $author['firstname'], $author['lastname']),
+                    foreignOperator: 'LIKE',
+                );
+        }
+
+        // Joined filters on publisher
+        $publisherStore = fn (Database $db) => $db->getStore('publishers');
+        $publisherCriteria = fn (array $book) => ['key', '=', $book['publisher']];
+        $this
+            ->registerJoinedStoreFilter(
+                name: 'publisher.name',
+                operator: '=',
+                description: 'Exact match on the publishers name',
+                foreignStore: $publisherStore,
+                foreignCriteria: $publisherCriteria,
+                foreignField: 'name',
+                foreignOperator: '='
+            )
+            ->registerJoinedStoreFilter(
+                name: 'publisher.name',
+                operator: '~',
+                description: 'Pattern match on the publishers name',
+                foreignStore: $publisherStore,
+                foreignCriteria: $publisherCriteria,
+                foreignField: 'name',
+                foreignOperator: 'LIKE'
+            );
     }
 }

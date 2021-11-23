@@ -24,10 +24,10 @@ class Database
 
     public function publishers(): Store
     {
-        return $this->getStore('publisher');
+        return $this->getStore('publishers');
     }
 
-    protected function getStore(string $name): Store
+    public function getStore(string $name): Store
     {
         if (!array_key_exists($name, $this->stores)) {
             $this->stores[$name] = new Store($name, $this->datadir, $this->configuration);

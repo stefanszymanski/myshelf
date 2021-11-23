@@ -2,6 +2,7 @@
 
 namespace App\Domain\Repository;
 
+use App\Configuration;
 use App\Database;
 use App\Domain\Type\TypeInterface;
 use SleekDB\QueryBuilder;
@@ -9,36 +10,34 @@ use SleekDB\Store;
 
 abstract class AbstractRepository
 {
-    abstract public function getStore(): Store;
+    protected TypeInterface $type;
 
-    // TODO find a better way to inject a specific Type as overwriting the constructor
-    protected function getType(): TypeInterface
+    protected Store $store;
+
+    public function __construct(protected Database $db, protected Configuration $configuration)
     {
-        return $this->type;
+        // Get the type name from the class name of the repository and set type and store properties.
+        $classNameParts = explode('\\', static::class);
+        $className = array_pop($classNameParts);
+        $typeName = strtolower(substr($className, 0, -10));
+        $this->type = $configuration->getType($typeName);
+        $this->store = $db->getStore(sprintf('%ss', $typeName));
     }
 
-    public function __construct(protected Database $db)
-    {
-    }
-
-    public function find(array $fields, array $orderBy = null): array
+    public function find(array $fields, array $orderBy = null, array $filters = []): array
     {
         // TODO check for invalid values in $fields and $orderBy
 
         $qb = $this->getQueryBuilder();
 
-        $select = [];
-        foreach ($fields as $field) {
-            $fieldConfig = $this->type->getFieldConfiguration($field);
-            if (isset($fieldConfig['select'])) {
-                $select = array_merge($select, $fieldConfig['select']);
-            }
-            if (isset($fieldConfig['join']) && isset($fieldConfig['joinAs'])) {
-                $qb->join($fieldConfig['join']($this->db), $fieldConfig['joinAs']);
-            }
+        foreach ($fields as $fieldName) {
+            $this->type->modifyQueryForField($this->db, $qb, $fieldName);
         }
 
-        $qb->select($select);
+        foreach ($filters as list($fieldName, $operator, $fieldValue)) {
+            $qb = $this->type->modifyQueryForFilter($this->db, $qb, $fieldName, $operator, $fieldValue);
+        }
+
         $qb->orderBy($orderBy);
 
         return $qb->getQuery()->fetch();
@@ -46,40 +45,6 @@ abstract class AbstractRepository
 
     public function getQueryBuilder(): QueryBuilder
     {
-        return $this->getStore()->createQueryBuilder();
-    }
-
-    protected function getField(string $name): array
-    {
-        return $this->fields[$name];
-    }
-
-    protected function registerField(string $name, string $label, array $select = null): self
-    {
-        $this->fields[$name] = [
-            'label' => $label,
-            'select' => [$name]
-        ];
-        return $this;
-    }
-
-    protected function registerVirtualField(string $name, string $label, array $select = null): self
-    {
-        $this->fields[$name] = [
-            'label' => $label,
-            'select' => [$name => $select]
-        ];
-        return $this;
-    }
-
-    protected function registerJoinField(string $name, string $label, array $select, string $joinAs, callable $join)
-    {
-        $this->fields[$name] = [
-            'label' => $label,
-            'select' => [$name => $select],
-            'join' => $join,
-            'joinAs' => $joinAs,
-        ];
-        return $this;
+        return $this->store->createQueryBuilder();
     }
 }

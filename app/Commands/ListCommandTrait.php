@@ -50,7 +50,7 @@ trait ListCommandTrait
     protected function renderTable(array $fields, array $records, array $hiddenFields = [], string $groupBy = null)
     {
         $table = new Table($this->output);
-        $table->setHeaders($this->type->getFieldLabels(...array_diff($fields, $hiddenFields)));
+        $table->setHeaders($this->type->getFieldLabels(array_diff($fields, $hiddenFields)));
         $table->setStyle('box');
         $rows = $groupBy
             ? $this->createGroupedTableRows($records, $groupBy, $hiddenFields)
