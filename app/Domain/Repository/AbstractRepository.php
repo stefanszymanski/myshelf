@@ -8,7 +8,7 @@ use App\Domain\Type\TypeInterface;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
-abstract class AbstractRepository
+abstract class AbstractRepository implements RepositoryInterface
 {
     protected TypeInterface $type;
 
@@ -41,6 +41,11 @@ abstract class AbstractRepository
         $qb->orderBy($orderBy);
 
         return $qb->getQuery()->fetch();
+    }
+
+    public function getStore(): Store
+    {
+        return $this->store;
     }
 
     public function getQueryBuilder(): QueryBuilder

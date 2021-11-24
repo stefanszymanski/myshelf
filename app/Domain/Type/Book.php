@@ -104,14 +104,14 @@ class Book extends AbstractType
             ['author', 'an authors', $authorCriteria],
             ['editor', 'an editors', $editorCriteria],
         ];
-        foreach ($persons as list($field, $description, $store)) {
+        foreach ($persons as list($field, $description, $criteria)) {
             $this
                 ->registerJoinedStoreFilter(
                     name: "$field.lastname",
                     operator: '=',
                     description: "Exact match on $description last name",
-                    foreignStore: $store,
-                    foreignCriteria: $authorCriteria,
+                    foreignStore: $personStore,
+                    foreignCriteria: $criteria,
                     foreignField: 'lastname',
                     foreignOperator: '=',
                 )
@@ -119,8 +119,8 @@ class Book extends AbstractType
                     name: "$field.lastname",
                     operator: '~',
                     description: "Pattern match on $description last name",
-                    foreignStore: $store,
-                    foreignCriteria: $authorCriteria,
+                    foreignStore: $personStore,
+                    foreignCriteria: $criteria,
                     foreignField: 'lastname',
                     foreignOperator: 'LIKE',
                 )
@@ -128,8 +128,8 @@ class Book extends AbstractType
                     name: "$field.name",
                     operator: '~',
                     description: "Pattern match on $description full name",
-                    foreignStore: $store,
-                    foreignCriteria: $authorCriteria,
+                    foreignStore: $personStore,
+                    foreignCriteria: $criteria,
                     foreignField: fn (array $author) => sprintf('%s %s', $author['firstname'], $author['lastname']),
                     foreignOperator: 'LIKE',
                 );

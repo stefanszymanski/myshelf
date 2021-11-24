@@ -2,79 +2,40 @@
 
 namespace App\Commands\Person;
 
-use App\Commands\ListCommandTrait;
+use App\Commands\AbstractListCommand;
+use App\Configuration;
 use App\Domain\Repository\PersonRepository;
-use App\Domain\Type\Person;
-use LaravelZero\Framework\Commands\Command;
+use App\Domain\Repository\RepositoryInterface;
+use App\Domain\Type\TypeInterface;
 
-class ListCommand extends Command
+class ListCommand extends AbstractListCommand
 {
-    use ListCommandTrait;
-
     protected $signature = 'person:list
                             {--fields=name : Fields to display, separated by comma}
                             {--orderby= : Field names to order by, separated by comma, may be prefixed with a - for descending sorting}
                             {--groupby= : Field name to group by}
+                            {--filter=* : Filter expression}
     ';
 
     protected $description = 'List persons';
 
+    protected TypeInterface $type;
+
     public function __construct(
         protected PersonRepository $repository,
-        protected Person $type,
+        Configuration $configuration
     ) {
         parent::__construct();
+        $this->type = $configuration->getType('person');
     }
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    protected function getRepository(): RepositoryInterface
     {
-        $fields = $this->getFields();
-        $orderBy = $this->getOrderBy();
-        $groupBy = $this->option('groupby');
+        return $this->repository;
+    }
 
-        // Validate arguments --fields, --orderby and --groupby
-        $error = false;
-        if ($fields && $invalidFields = $this->type->checkFieldNames($fields)) {
-            $this->error(sprintf('Argument --fields contains invalid fields: %s', implode(', ', $invalidFields)));
-            $error = true;
-        }
-        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(array_keys($orderBy))) {
-            $this->error(sprintf('Argument --orderby contains invalid fields: %s', implode(', ', $invalidOrderFields)));
-            $error = true;
-        }
-        if ($groupBy && $this->type->checkFieldNames([$groupBy])) {
-            $this->error(sprintf('Argument --groupby is not a valid field name'));
-            $error = true;
-        }
-        if ($error) {
-            return;
-        }
-
-        // Build a list of fields that are required to get fetched but should not be displayed.
-        $hiddenFields = [];
-        if ($groupBy && !in_array($groupBy, $fields)) {
-            $fields[] = $groupBy;
-            $hiddenFields[] = $groupBy;
-        }
-        foreach (array_keys($orderBy) as $orderByField) {
-            if (!in_array($orderByField, $fields)) {
-                $fields[] = $orderByField;
-                $hiddenFields[] = $orderByField;
-            }
-        }
-        // TODO the id field is always fetched and the first field of a record.
-        //      Therefore the fields in a record may not be in the same order as in
-        //      $fields.
-        //      Fix this behaviour!
-        if (!in_array('id', $fields)) {
-            $hiddenFields[] = 'id';
-        }
-
-        $records = $this->repository->find($fields, $orderBy);
-
-        $this->renderTable($fields, $records, $hiddenFields, $groupBy);
+    protected function getType(): TypeInterface
+    {
+        return $this->type;
     }
 }
