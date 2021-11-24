@@ -68,7 +68,6 @@ abstract class AbstractListCommand extends Command
         // Filters
         $filters = [];
         foreach ($this->option('filter') as $filter) {
-            // Supported operators are ~ = < > ! ?
             if (preg_match('/^([a-z0-9.-]+)([~=<>!?]+)(.*)$/', $filter, $matches)) {
                 array_shift($matches);
                 $filters[] = $matches;

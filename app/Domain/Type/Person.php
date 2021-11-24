@@ -41,7 +41,7 @@ class Person extends AbstractType
                 label: 'Full name',
                 type: self::FIELD_TYPE_VIRTUAL,
                 description: 'First name and last name concatenated: `{firstname} {lastname}`',
-                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                queryModifier: function (QueryBuilder $qb, string $fieldName) {
                     return $qb->select([$fieldName => ['CONCAT' => [' ', 'firstname', 'lastname']]]);
                 }
             )
@@ -56,6 +56,38 @@ class Person extends AbstractType
                         ->join(fn ($person) => $db->books()->findBy(['authors', 'CONTAINS', $person['key']]), '_books')
                         ->select([$fieldName => ['LENGTH' => '_books']]);
                 }
+            );
+
+        $this
+            ->registerSimpleFilter(
+                name: 'firstname',
+                operator: '=',
+                description: 'Exact match on first name',
+                queryModifier: fn ($value) => ['firstname', '=', $value],
+            )
+            ->registerSimpleFilter(
+                name: 'firstname',
+                operator: '~',
+                description: 'Pattern match on first name',
+                queryModifier: fn ($value) => ['firstname', 'LIKE', $value],
+            )
+            ->registerSimpleFilter(
+                name: 'lastname',
+                operator: '=',
+                description: 'Exact match on last name',
+                queryModifier: fn ($value) => ['lastname', '=', $value],
+            )
+            ->registerSimpleFilter(
+                name: 'lastname',
+                operator: '~',
+                description: 'Pattern match on last name',
+                queryModifier: fn ($value) => ['lastname', 'LIKE', $value],
+            )
+            ->registerSimpleFilter(
+                name: 'nationality',
+                operator: '=',
+                description: 'Exact match on nationality',
+                queryModifier: fn ($value) => ['nationality', '=', $value],
             );
     }
 }
