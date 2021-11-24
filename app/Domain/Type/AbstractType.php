@@ -12,8 +12,22 @@ abstract class AbstractType implements TypeInterface
     public const FIELD_TYPE_VIRTUAL = 'virtual';
     public const FIELD_TYPE_JOINED = 'joined';
 
+    /**
+     * Registered fields and their configurations.
+     *
+     * @see self::registerField()
+     *
+     * @var array<string, array{name:string,label:string,description:string,type:string,queryModifier:callable(QueryBuilder):QueryBuilder}
+     */
     protected array $fields = [];
 
+    /**
+     * Registered filters and their configurations.
+     *
+     * @see self::registerFilter()
+     *
+     * @var array<string,array<string,array{description:string,queryModifier:callable(QueryBuilder,mixed,Database):QueryModifier}>>
+     */
     protected array $filters = [];
 
     public function __construct()
@@ -36,16 +50,25 @@ abstract class AbstractType implements TypeInterface
 
     abstract protected function configure(): void;
 
+    /**
+     * {@inheritDoc}
+     */
     public function getFieldNames(): array
     {
         return array_keys($this->fields);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function checkFieldNames(array $fields): array
     {
         return array_filter($fields, fn ($field) => !in_array($field, array_keys($this->fields)));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getFieldLabels(array $fields = null): array
     {
         if (!$fields) {
@@ -62,6 +85,9 @@ abstract class AbstractType implements TypeInterface
         return $labels;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getFieldInfo(): array
     {
         return array_map((function ($field) {
@@ -74,18 +100,34 @@ abstract class AbstractType implements TypeInterface
         })->bindTo($this), $this->fields);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function modifyQueryForFilter(Database $db, QueryBuilder $qb, string $fieldName, string $operator, $fieldValue): QueryBuilder
     {
         $config = $this->filters[$fieldName][$operator];
         return $config['modifyQuery']($qb, $fieldValue, $db);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function modifyQueryForField(Database $db, QueryBuilder $qb, string $fieldName): QueryBuilder
     {
         $config = $this->fields[$fieldName];
         return $config['modifyQuery']($qb, $fieldName, $db);
     }
 
+    /**
+     * Register a new field.
+     *
+     * @param string $name Unique identifier of the field
+     * @param string $label
+     * @param string $type Field type, must be one of the class constants that start with FIELD_TYPE_
+     * @param string|null $description
+     * @param callable(QueryBuilder): QueryBuilder $queryModifier
+     * @return self
+     */
     protected function registerField(string $name, string $label, string $type, ?string $description = null, callable $queryModifier = null): self
     {
         if (!$queryModifier) {
@@ -101,25 +143,58 @@ abstract class AbstractType implements TypeInterface
         return $this;
     }
 
-    protected function registerSimpleFilter(string $name, string $operator, callable $filter, string $description = null): self
+    /**
+     * Register a filter on a field of the same table.
+     *
+     * The filter is identified by the combination of $name and $operator.
+     *
+     * @param string $name
+     * @param string $operator
+     * @param callable(QueryBuilder, mixed, Database): QueryBuilder $queryModifier Second argument is a user provided value to filter for
+     * @param string|null $description
+     * @return self
+     */
+    protected function registerSimpleFilter(string $name, string $operator, callable $queryModifier, string $description = null): self
     {
         $this->registerFilter(
             name: $name,
             operator: $operator,
             description: $description,
-            filter: function (QueryBuilder $qb, $value) use ($filter) {
-            return $qb->where([$filter($value)]);
-        });
+            queryModifier: function (QueryBuilder $qb, $value) use ($queryModifier) {
+                return $qb->where([$queryModifier($value)]);
+            }
+        );
         return $this;
     }
 
+    /**
+     * Register a filter on a joined store.
+     *
+     * The filter is identified by the combination of $name and $operator.
+     *
+     * The method creates a query modifier function that:
+     *  1. calls $foreignStore to create a Store object
+     *  2. calls $foreignCriteria with a record of the primary store to create a criteria array
+     *  3. calls the created foreign Store object with the created criteria to get foreign records
+     *  4. checks for each foreign record if the value of $foreignField with $foreignOperator matches a user input
+     *  5. if one of the foreign records matches the primary record is kept in the result list
+     *
+     * @param string $name
+     * @param string $operator
+     * @param callable(Database): Store $foreignStore Foreign store factory
+     * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store and returns a list of records of the joined store
+     * @param string|callable(array): mixed $foreignField Either the field name of a foreign store or a callable that gets the foreign record and returns some value
+     * @param string $foreignOperator A operator that is supported by CondiitionsHandler::verifyCondition()
+     * @param string|null $description
+     * @return self
+     */
     protected function registerJoinedStoreFilter(string $name, string $operator, callable $foreignStore, callable $foreignCriteria, string|callable $foreignField, string $foreignOperator, string $description = null): self
     {
         $this->registerFilter(
             name: $name,
             operator: $operator,
             description: $description,
-            filter: function (QueryBuilder $qb, $filterValue, Database $db) use ($foreignStore, $foreignCriteria, $foreignField, $foreignOperator) {
+            queryModifier: function (QueryBuilder $qb, $filterValue, Database $db) use ($foreignStore, $foreignCriteria, $foreignField, $foreignOperator) {
                 return $qb->where([function ($record) use ($db, $foreignStore, $foreignCriteria, $filterValue, $foreignField, $foreignOperator) {
                     $foreignRecords = $foreignStore($db)->findBy($foreignCriteria($record));
                     foreach ($foreignRecords as $foreignRecord) {
@@ -139,18 +214,30 @@ abstract class AbstractType implements TypeInterface
         return $this;
     }
 
-    protected function registerFilter(string $name, string $operator, callable $filter, string $description = null): self
+    /**
+     * Register a filter.
+     *
+     * @param string $name
+     * @param string $operator
+     * @param callable(QueryModifier, mixed, Database): QueryModifier The second argument is a user provided value to filter for
+     * @param string|null $description
+     * @return self
+     */
+    protected function registerFilter(string $name, string $operator, callable $queryModifier, string $description = null): self
     {
         if (!isset($this->filters[$name])) {
             $this->filters[$name] = [];
         }
         $this->filters[$name][$operator] = [
-            'modifyQuery' => $filter,
+            'modifyQuery' => $queryModifier,
             'description' => $description,
         ];
         return $this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getFilterInfo(): array
     {
         $info = [];

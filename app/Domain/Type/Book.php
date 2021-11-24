@@ -64,19 +64,19 @@ class Book extends AbstractType
                 name: 'author',
                 operator: '=',
                 description: 'Exact match on a authors key',
-                filter: fn ($value) => ['authors', 'CONTAINS', $value]
+                queryModifier: fn ($value) => ['authors', 'CONTAINS', $value]
             )
             ->registerSimpleFilter(
                 name: 'title',
                 operator: '=',
                 description: 'Exact match on the title',
-                filter: fn ($value) => ['title', '=', $value]
+                queryModifier: fn ($value) => ['title', '=', $value]
             )
             ->registerSimpleFilter(
                 name: 'title',
                 operator: '~',
                 description: 'Pattern match on the title',
-                filter: fn ($value) => ['title', 'LIKE', $value]
+                queryModifier: fn ($value) => ['title', 'LIKE', $value]
             );
 
         // Filters on publishing year
@@ -92,7 +92,7 @@ class Book extends AbstractType
                 name: 'published',
                 operator: $operator,
                 description: "Publishing year $description",
-                filter: fn ($value) => ['published', $internalOperator, $value],
+                queryModifier: fn ($value) => ['published', $internalOperator, $value],
             );
         }
 
