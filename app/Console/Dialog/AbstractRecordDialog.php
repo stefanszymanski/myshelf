@@ -2,6 +2,7 @@
 
 namespace App\Console\Dialog;
 
+use App\Configuration;
 use App\Database;
 use App\Validator\NewKeyValidator;
 use App\Validator\NotEmptyValidator;
@@ -17,6 +18,7 @@ abstract class AbstractRecordDialog
 
     public function __construct(
         protected Database $db,
+        protected Configuration $configuration,
         InputInterface $input,
         OutputStyle $output,
         int $verbosity,

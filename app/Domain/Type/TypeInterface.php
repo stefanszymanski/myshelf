@@ -38,7 +38,7 @@ interface TypeInterface
     public function getFieldInfo(): array;
 
     /**
-     * Get info about all filter.
+     * Get info about all filters.
      *
      * @return array<string,array{name:string,operator:string,description:string}>
      */

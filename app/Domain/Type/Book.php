@@ -53,6 +53,20 @@ class Book extends AbstractType
                             return implode('; ', $authors);
                         }]);
                 },
+            )
+            ->registerField(
+                name: 'editors',
+                label: 'Editors',
+                description: 'Names of the editors',
+                type: self::FIELD_TYPE_JOINED,
+                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    return $qb
+                        ->join(fn ($book) => $db->persons()->findBy(['key', 'IN', $book['editors']]), '_editors')
+                        ->select([$fieldName => function ($book) {
+                            $editors = array_map(fn ($editor) => sprintf('%s %s', $editor['firstname'], $editor['lastname']), $book['_editors']);
+                            return implode('; ', $editors);
+                        }]);
+                },
             );
 
         // TODO add a author variant, that creates a record for each author of a book. That would be useful for grouping by.
@@ -96,7 +110,7 @@ class Book extends AbstractType
             );
         }
 
-        // Joined filters on persons (authors and editors)
+        // Filters on persons, i.e. authors and editors (join the person store)
         $personStore = fn (Database $db) => $db->getStore('persons');
         $authorCriteria = fn (array $book) => ['key', 'IN', $book['authors']];
         $editorCriteria = fn (array $book) => ['key', 'IN', $book['editors']];
@@ -135,7 +149,7 @@ class Book extends AbstractType
                 );
         }
 
-        // Joined filters on publisher
+        // Filters on publisher (join the publisher store)
         $publisherStore = fn (Database $db) => $db->getStore('publishers');
         $publisherCriteria = fn (array $book) => ['key', '=', $book['publisher']];
         $this

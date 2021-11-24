@@ -2,6 +2,7 @@
 
 namespace App\Commands\Person;
 
+use App\Configuration;
 use App\Console\Dialog\PersonDialog;
 use App\Database;
 use LaravelZero\Framework\Commands\Command;
@@ -27,9 +28,9 @@ class AddCommand extends Command
      *
      * @return mixed
      */
-    public function handle(Database $db)
+    public function handle(Database $db, Configuration $configuration)
     {
-        $personDialog = new PersonDialog($db, $this->input, $this->output, $this->verbosity);
+        $personDialog = new PersonDialog($db, $configuration, $this->input, $this->output, $this->verbosity);
         $personDialog->createRecord();
     }
 }

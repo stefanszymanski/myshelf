@@ -13,7 +13,7 @@ class Configuration
         if (!isset($this->types[$name])) {
             $className = sprintf('\\App\\Domain\\Type\\%s', ucfirst($name));
             if (!class_exists($className)) {
-                return null;
+                throw new \InvalidArgumentException("Type '$name' does not exist");
             }
             $this->types[$name] = new $className;
         }

@@ -32,6 +32,7 @@ abstract class AbstractType implements TypeInterface
 
     public function __construct()
     {
+        // Register fields that all types have.
         $this
             ->registerField(
                 name: 'id',
@@ -48,6 +49,9 @@ abstract class AbstractType implements TypeInterface
         $this->configure();
     }
 
+    /**
+     * Implement this method to define types and filters.
+     */
     abstract protected function configure(): void;
 
     /**
@@ -90,14 +94,14 @@ abstract class AbstractType implements TypeInterface
      */
     public function getFieldInfo(): array
     {
-        return array_map((function ($field) {
+        return array_map(function ($field) {
             return [
                 'name' => $field['name'],
                 'label' => $field['label'],
                 'description' => $field['description'],
                 'type' => $field['type'],
             ];
-        })->bindTo($this), $this->fields);
+        }, $this->fields);
     }
 
     /**
@@ -170,27 +174,33 @@ abstract class AbstractType implements TypeInterface
     /**
      * Register a filter on a joined store.
      *
-     * The filter is identified by the combination of $name and $operator.
+     * The filter is identified by the combination of `$name` and `$operator`.
+     *
+     * In contrast to self::registerJoinedStoreFilter2() `$foreignField` is used to get a value from each record
+     * that is compared against. The filter returns `true` if one of the foreign record matches the user input.
      *
      * The method creates a query modifier function that:
-     *  1. calls $foreignStore to create a Store object
-     *  2. calls $foreignCriteria with a record of the primary store to create a criteria array
+     *  1. calls `$foreignStore` to create a Store object
+     *  2. calls `$foreignCriteria` with a record of the primary store to create a criteria array
      *  3. calls the created foreign Store object with the created criteria to get foreign records
-     *  4. checks for each foreign record if the value of $foreignField with $foreignOperator matches a user input
-     *  5. if one of the foreign records matches the primary record is kept in the result list
+     *  4. checks for each foreign record if the value of `$foreignField` with `$foreignOperator` matches the user input
+     *     until a foreign records matches.
      *
      * @param string $name
      * @param string $operator
      * @param callable(Database): Store $foreignStore Foreign store factory
-     * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store and returns a list of records of the joined store
-     * @param string|callable(array): mixed $foreignField Either the field name of a foreign store or a callable that gets the foreign record and returns some value
-     * @param string $foreignOperator A operator that is supported by CondiitionsHandler::verifyCondition()
+     * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store
+     *                                                       and returns a list of records of the joined store
+     * @param string|callable(array): mixed $foreignField Either the field name of a foreign store or a callable
+     *                                                    that is called with each foreign record and returns some value
+     *                                                    that is compared against the user input
+     * @param string $foreignOperator A operator that is supported by ConditionsHandler::verifyCondition()
      * @param string|null $description
      * @return self
      */
     protected function registerJoinedStoreFilter(string $name, string $operator, callable $foreignStore, callable $foreignCriteria, string|callable $foreignField, string $foreignOperator, string $description = null): self
     {
-        $this->registerFilter(
+        return $this->registerFilter(
             name: $name,
             operator: $operator,
             description: $description,
@@ -211,7 +221,50 @@ abstract class AbstractType implements TypeInterface
                 }]);
             }
         );
-        return $this;
+    }
+
+    /**
+     * Register a filter on a joined store.
+     *
+     * The filter is identified by the combination of `$name` and `$operator`.
+     *
+     * In contrast to self::registerJoinedStoreFilter() `$foreignValue` calculates a single value
+     * that is compared against. The filter returns `true` if this value matches the user input.
+     *
+     * TODO find a better method name
+     *
+     * The method creates a query modifier function that:
+     *  1. calls `$foreignStore` to create a Store object
+     *  2. calls `$foreignCriteria` with a record of the primary store to create a criteria array
+     *  3. calls the created foreign Store object with the created criteria to get foreign records
+     *  4. calls `$foreignValue` to get the value that is compared against the user input
+     *  5. returns whether the value returned by `$foreignValue` and `$foreignOperator` matches the user input
+     *
+     * @param string $name
+     * @param string $operator
+     * @param callable(Database): Store $foreignStore Foreign store factory
+     * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store
+     *                                                       and returns a list of records of the joined store
+     * @param callable(array<array>): mixed $foreignValue Is called with all foreign records at once
+     *                                                    and returns the value that is compared against the user input
+     * @param string $foreignOperator A operator that is supported by ConditionsHandler::verifyCondition()
+     * @param string|null $description
+     * @return self
+     */
+    protected function registerJoinedStoreFilter2(string $name, string $operator, callable $foreignStore, callable $foreignCriteria, callable $foreignValue, string $foreignOperator, string $description = null): self
+    {
+        return $this->registerFilter(
+            name: $name,
+            operator: $operator,
+            description: $description,
+            queryModifier: function (QueryBuilder $qb, $filterValue, Database $db) use ($foreignStore, $foreignCriteria, $foreignValue, $foreignOperator) {
+                return $qb->where([function ($record) use ($db, $foreignStore, $foreignCriteria, $filterValue, $foreignValue, $foreignOperator) {
+                    $foreignRecords = $foreignStore($db)->findBy($foreignCriteria($record));
+                    $foreignFieldValue = $foreignValue($foreignRecords);
+                    return ConditionsHandler::verifyCondition($foreignOperator, $foreignFieldValue, $filterValue);
+                }]);
+            }
+        );
     }
 
     /**

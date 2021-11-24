@@ -9,6 +9,9 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 
+// TODO refactor to require less boilerplate crap in extending classes
+//      maybe replace them by a single ListCommand that handles all types. The
+//      same for the AddCommand and other commands in the future.
 abstract class AbstractListCommand extends Command
 {
     abstract protected function getRepository(): RepositoryInterface;
@@ -56,10 +59,6 @@ abstract class AbstractListCommand extends Command
                 $hiddenFields[] = $orderByField;
             }
         }
-        // TODO the id field is always fetched and the first field of a record.
-        //      Therefore the fields in a record may not be in the same order as in
-        //      $fields.
-        //      Fix this behaviour!
         if (!in_array('id', $fields)) {
             $hiddenFields[] = 'id';
         }
@@ -74,47 +73,54 @@ abstract class AbstractListCommand extends Command
             }
         }
 
-        $records = $this->getRepository()->find($fields, $orderBy, $filters);
+        $records = $this->getRepository()->find($fields, $orderBy, $filters, $hiddenFields);
 
         $this->renderTable($fields, $records, $hiddenFields, $groupBy);
     }
 
+    /**
+     * Get the parsed --orderby option.
+     *
+     * Value of the option is a comma separated list of field names.
+     * A field name may be prefixed with ! for a descending sorting.
+     *
+     * @return array<string,string> Key is a field name, value is either 'asc' or 'desc'
+     */
     protected function getOrderBy(): array
     {
         $_orderBy = $this->option('orderby');
         if (!$_orderBy) {
             return [];
         }
-
         $_orderBy = array_filter(
             array_map('trim', explode(',', $_orderBy))
         );
-
         // Parse values.
-        // Field names prefixed with - are ordered descending.
-        // Field names prefixed with + or without prefix are ordeded ascending.
+        // Field names prefixed with ! are ordered descending.
         $orderBy = [];
         foreach ($_orderBy as $_field) {
-            if (str_starts_with($_field, '-')) {
+            if (str_starts_with($_field, '!')) {
                 $orderBy[substr($_field, 1)] = 'desc';
-            } elseif (str_starts_with($_field, '+')) {
-                $orderBy[substr($_field, 1)] = 'asc';
             } else {
                 $orderBy[$_field] = 'asc';
             }
         }
-
         return $orderBy;
     }
 
+    /**
+     * Get the parsed --fields option.
+     *
+     * Value of the option is a comma separated list of field names.
+     *
+     * @return array<string> List of field names
+     */
     protected function getFields(): array
     {
         $_fields = $this->option('fields');
-        // Trim whitespaces around field names.
         $fields = array_filter(
             array_map('trim', explode(',', $_fields))
         );
-
         return $fields;
     }
 
@@ -146,7 +152,7 @@ abstract class AbstractListCommand extends Command
             $groupedRows[$groupValue][] = $record;
             $colspan = $colspan >= count($record) ? $colspan : count($record);
         }
-        // Create rows: a headline for each group and than their rows.
+        // Create rows: a headline for each group and then their rows.
         $rows = [];
         $separator = new TableSeparator();
         $groupCounter = 0;
