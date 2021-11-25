@@ -1,7 +1,10 @@
 <?php
 
-namespace App\Console;
+declare(strict_types=1);
 
+namespace App\Commands;
+
+use App\Utility\RecordUtility;
 use App\Validator\NewKeyValidator;
 use App\Validator\NotEmptyValidator;
 use SleekDB\Store;
@@ -9,22 +12,10 @@ use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableStyle;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
-class OutputStyle extends \Illuminate\Console\OutputStyle
+abstract class Command extends \LaravelZero\Framework\Commands\Command
 {
-    private OutputInterface $output;
-
-    private InputInterface $input;
-
-    public function __construct(InputInterface $input, OutputInterface $output)
-    {
-        parent::__construct($input, $output);
-        $this->output = $output;
-        $this->input = $input;
-    }
-    protected function record(array $headers, array $record): void
+    protected function displayRecord(array $headers, array $record): void
     {
         // Configure a custom style, because per default the top border uses incorrect characters.
         $style = (new TableStyle())
@@ -45,7 +36,7 @@ class OutputStyle extends \Illuminate\Console\OutputStyle
         $this->newLine();
     }
 
-    public function title(string $message)
+    public function headline(string $message): void
     {
         $this->newLine();
         $this->output->writeln([

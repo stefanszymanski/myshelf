@@ -34,7 +34,7 @@ abstract class AbstractRecordDialog
      * @param array $defaults Record default values
      * @return string Key of the new record
      */
-    abstract public function createRecord(array $defaults = []): string;
+    /* abstract public function createRecord(array $defaults = []): string; */
 
     /**
      * Build autocomplete options.
