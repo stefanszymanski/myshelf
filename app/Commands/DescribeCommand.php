@@ -17,9 +17,9 @@ class DescribeCommand extends Command
         AbstractType::FIELD_TYPE_JOINED => 'Virtual fields, taken from references on other tables'
     ];
 
-    protected $signature = 'describe {type}';
+    protected $signature = 'desc {type}';
 
-    protected $description = 'Command description';
+    protected $description = 'Describe a record type';
 
     /**
      * Execute the console command.
@@ -29,14 +29,13 @@ class DescribeCommand extends Command
     public function handle(Configuration $configuration)
     {
         $typeName = $this->argument('type');
-        $type = $configuration->getType($typeName);
+        $type = $configuration->resolveType($typeName);
         if (!$type) {
             $this->error("Invalid type '$typeName'");
             return;
         }
 
         // TODO rewrite table rendering
-        // TODO add Description to filters
         $info = $type->getFieldInfo();
         $this->output->writeln("\n  Table fields (usable with --fields, --orderby and --groupby)");
         $this->renderTable(['Name', 'Label', 'Description'], $info, 'type');

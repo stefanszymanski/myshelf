@@ -4,6 +4,7 @@ namespace App\Domain\Type;
 
 use App\Database;
 use SleekDB\QueryBuilder;
+use SleekDB\Store;
 
 class Book extends AbstractType
 {
@@ -171,5 +172,42 @@ class Book extends AbstractType
                 foreignField: 'name',
                 foreignOperator: 'LIKE'
             );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getDefaultListFields(): array
+    {
+        return ['title', 'authors'];
+    }
+
+    /**
+     * Build autocomplete options.
+     */
+    public function getAutocompleteOptions(Store $store): array
+    {
+        $records = $this->db->books()->createQueryBuilder()
+            ->select(['key', 'title'])
+            ->getQuery()
+            ->fetch();
+        $options = [];
+        foreach ($records as $record) {
+            $options[$record['title']] = $record['key'];
+        }
+        return $options;
+    }
+
+    /**
+     * Parse the user input from the record selection into record default values.
+     *
+     * @param string $value The user input
+     * @return array Record defaults
+     */
+    public function getDefaultsFromAutocompleteInput(string $value): array
+    {
+        return [
+            'title' => $value,
+        ];
     }
 }

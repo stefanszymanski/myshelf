@@ -4,6 +4,7 @@ namespace App\Domain\Type;
 
 use App\Database;
 use SleekDB\QueryBuilder;
+use SleekDB\Store;
 
 class Publisher extends AbstractType
 {
@@ -40,5 +41,42 @@ class Publisher extends AbstractType
                 description: 'Pattern match on name',
                 queryModifier: fn ($value) => ['name', 'LIKE', $value],
             );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getDefaultListFields(): array
+    {
+        return ['name'];
+    }
+
+    /**
+     * Build autocomplete options.
+     */
+    public function getAutocompleteOptions(Store $store): array
+    {
+        $records = $store->createQueryBuilder()
+            ->select(['key', 'name'])
+            ->getQuery()
+            ->fetch();
+        $options = [];
+        foreach ($records as $record) {
+            $options[$record['name']] = $record['key'];
+        }
+        return $options;
+    }
+
+    /**
+     * Parse the user input from the record selection into record default values.
+     *
+     * @param string $value The user input
+     * @return array Record defaults
+     */
+    public function getDefaultsFromAutocompleteInput(string $value): array
+    {
+        return [
+            'name' => $value,
+        ];
     }
 }

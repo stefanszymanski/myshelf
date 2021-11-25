@@ -2,44 +2,56 @@
 
 namespace App\Commands;
 
-use App\Domain\Repository\RepositoryInterface;
+use App\Configuration;
 use App\Domain\Type\TypeInterface;
+use App\Repository;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 
-// TODO refactor to require less boilerplate crap in extending classes
-//      maybe replace them by a single ListCommand that handles all types. The
-//      same for the AddCommand and other commands in the future.
-abstract class AbstractListCommand extends Command
+class ListCommand extends Command
 {
-    abstract protected function getRepository(): RepositoryInterface;
+    protected Repository $repository;
 
-    abstract protected function getType(): TypeInterface;
+    protected TypeInterface $type;
 
-    /**
-     * Execute the console command.
-     *
-     * @return mixed
-     */
+    protected $signature = 'ls {type}
+                            {--fields= : Fields to display, separated by comma}
+                            {--orderby= : Field names to order by, separated by comma, may be prefixed with a ! for descending sorting}
+                            {--groupby= : Field name to group by}
+                            {--filter=* : Filter expression: <field><operator><value>}
+    ';
+
+    protected $description = 'List records';
+
+    public function __construct(protected Configuration $configuration)
+    {
+        parent::__construct();
+    }
+
     public function handle()
     {
+        $typeName = $this->argument('type');
+        $this->repository = $this->configuration->getRepository($typeName);
+        $this->type = $this->configuration->resolveType($typeName);
+
         $fields = $this->getFields();
         $orderBy = $this->getOrderBy();
         $groupBy = $this->option('groupby');
 
+        // TODO move argument validation to an earlier point in the command dispatching process, if possible
         // Validate arguments --fields, --orderby and --groupby
         $error = false;
-        if ($fields && $invalidFields = $this->getType()->checkFieldNames($fields)) {
+        if ($fields && $invalidFields = $this->type->checkFieldNames($fields)) {
             $this->error(sprintf('Argument --fields contains invalid fields: %s', implode(', ', $invalidFields)));
             $error = true;
         }
-        if ($orderBy && $invalidOrderFields = $this->getType()->checkFieldNames(array_keys($orderBy))) {
+        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(array_keys($orderBy))) {
             $this->error(sprintf('Argument --orderby contains invalid fields: %s', implode(', ', $invalidOrderFields)));
             $error = true;
         }
-        if ($groupBy && $this->getType()->checkFieldNames([$groupBy])) {
+        if ($groupBy && $this->type->checkFieldNames([$groupBy])) {
             $this->error(sprintf('Argument --groupby is not a valid field name'));
             $error = true;
         }
@@ -53,14 +65,10 @@ abstract class AbstractListCommand extends Command
             $fields[] = $groupBy;
             $hiddenFields[] = $groupBy;
         }
-        foreach (array_keys($orderBy) as $orderByField) {
-            if (!in_array($orderByField, $fields)) {
-                $fields[] = $orderByField;
-                $hiddenFields[] = $orderByField;
-            }
-        }
+
+        $exceptFields = [];
         if (!in_array('id', $fields)) {
-            $hiddenFields[] = 'id';
+            $exceptFields[] = 'id';
         }
 
         // TODO validate filter arguments
@@ -73,7 +81,7 @@ abstract class AbstractListCommand extends Command
             }
         }
 
-        $records = $this->getRepository()->find($fields, $orderBy, $filters, $hiddenFields);
+        $records = $this->repository->find($fields, $orderBy, $filters, $exceptFields);
 
         $this->renderTable($fields, $records, $hiddenFields, $groupBy);
     }
@@ -118,17 +126,22 @@ abstract class AbstractListCommand extends Command
     protected function getFields(): array
     {
         $_fields = $this->option('fields');
-        $fields = array_filter(
-            array_map('trim', explode(',', $_fields))
-        );
+        if (empty($_fields)) {
+            $fields = $this->type->getDefaultListFields();
+        } else {
+            $fields = array_filter(
+                array_map('trim', explode(',', $_fields))
+            );
+        }
         return $fields;
     }
 
     protected function renderTable(array $fields, array $records, array $hiddenFields = [], string $groupBy = null)
     {
         $table = new Table($this->output);
-        $table->setHeaders($this->getType()->getFieldLabels(array_diff($fields, $hiddenFields)));
+        $table->setHeaders($this->type->getFieldLabels(array_diff($fields, $hiddenFields)));
         $table->setStyle('box');
+        $table->getStyle()->setCellHeaderFormat('<comment>%s</comment>');
         $rows = $groupBy
             ? $this->createGroupedTableRows($records, $groupBy, $hiddenFields)
             : $records;
@@ -161,7 +174,7 @@ abstract class AbstractListCommand extends Command
                 // Don't add a separator before the first group headline.
                 $rows[] = $separator;
             }
-            $rows[] = [new TableCell($groupValue, ['colspan' => $colspan])];
+            $rows[] = [new TableCell("<info>$groupValue</info>", ['colspan' => $colspan])];
             $rows[] = $separator;
             $rows = array_merge($rows, $_rows);
             $groupCounter++;

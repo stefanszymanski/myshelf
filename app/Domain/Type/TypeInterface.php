@@ -4,15 +4,23 @@ namespace App\Domain\Type;
 
 use App\Database;
 use SleekDB\QueryBuilder;
+use SleekDB\Store;
 
 interface TypeInterface
 {
     /**
      * Get a list of supported field names.
      *
-     * @return array<string>
+     * @return array<string> List of field names
      */
     public function getFieldNames(): array;
+
+    /**
+     * Get a default list of fields to use in the list view.
+     *
+     * @return array<string> List of field names
+     */
+    public function getDefaultListFields(): array;
 
     /**
      * Check the given field names for invalid ones.
@@ -65,4 +73,8 @@ interface TypeInterface
      * @return QueryBuilder The same object as given or a new one.
      */
     public function modifyQueryForField(Database $db, QueryBuilder $qb, string $fieldName): QueryBuilder;
+
+    public function getAutocompleteOptions(Store $store): array;
+
+    public function getDefaultsFromAutocompleteInput(string $value): array;
 }
