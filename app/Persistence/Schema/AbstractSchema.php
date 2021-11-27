@@ -31,7 +31,7 @@ abstract class AbstractSchema implements Schema
      *
      * @var ?string
      */
-    protected ?string $name = null;
+    protected ?string $label = null;
 
     /**
      * Registered fields
@@ -58,7 +58,7 @@ abstract class AbstractSchema implements Schema
      */
     protected array $references = [];
 
-    public function __construct()
+    public function __construct(protected string $tableName)
     {
         // Register fields that all types have.
         $this
@@ -85,11 +85,11 @@ abstract class AbstractSchema implements Schema
     public function getLabel(): string
     {
         // If no name is set, determine it from the class name.
-        if (!$this->name) {
+        if (!$this->label) {
             $parts = array_reverse(explode('\\', static::class));
-            $this->name = array_pop($parts);
+            $this->label = array_pop($parts);
         }
-        return $this->name;
+        return $this->label;
     }
 
     /**
@@ -133,7 +133,12 @@ abstract class AbstractSchema implements Schema
      */
     protected function registerReference(string $field, string $table, bool $multiple): self
     {
-        $this->references[$field] = new Reference($field, $table, $multiple);
+        $this->references[$field] = new Reference(
+            table: $this->tableName,
+            foreignTable: $table,
+            foreignField: $field,
+            multiple: $multiple,
+        );
         return $this;
     }
 

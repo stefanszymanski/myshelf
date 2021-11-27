@@ -179,11 +179,14 @@ class Table
             $operator = $reference->multiple
                 ? 'CONTAINS'
                 : '=';
-            $records[sprintf('%s.%s', $reference->table, $reference->name)] = $referringStore->createQueryBuilder()
-                ->select(['id', 'key'])
-                ->where([$reference->name, $operator, $key])
+            $referringRecords = $referringStore->createQueryBuilder()
+                ->select(['id', 'key', 'authors'])
+                ->where([$reference->foreignField, $operator, $key])
                 ->getQuery()
                 ->fetch();
+            if (!empty($referringRecords)) {
+                $records[sprintf('%s.%s', $reference->table, $reference->foreignField)] = $referringRecords;
+            }
         }
         return $records;
     }
@@ -198,7 +201,7 @@ class Table
         foreach ($this->db->getTables() as $originTable) {
             $originReferences = $originTable->getReferences();
             foreach ($originReferences as $originFieldName => $originReference) {
-                if ($originReference->table === $targetTableName) {
+                if ($originReference->foreignTable === $targetTableName) {
                     $references[] = $originReference;
                 }
             }

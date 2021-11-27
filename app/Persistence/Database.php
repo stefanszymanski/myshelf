@@ -123,6 +123,6 @@ class Database
         if (!class_exists($className)) {
             throw new \InvalidArgumentException("Type '$className' does not exist");
         }
-        return new $className;
+        return new $className($name);
     }
 }
