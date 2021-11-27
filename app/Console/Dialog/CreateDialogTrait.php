@@ -12,9 +12,9 @@ trait CreateDialogTrait
      * @param string $type
      * @return DialogInterface
      */
-    protected function getCreateDialog(string $type): DialogInterface
+    protected function getCreateDialog(string $tableName): DialogInterface
     {
-        $className = sprintf('\\App\\Console\\Dialog\\%s\\CreateDialog', ucfirst($type));
-        return new $className($this->input, $this->output, $this->configuration);
+        $className = sprintf('\\App\\Console\\Dialog\\%s\\CreateDialog', ucfirst($tableName));
+        return new $className($this->input, $this->output, $this->db);
     }
 }

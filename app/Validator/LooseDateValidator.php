@@ -18,8 +18,11 @@ namespace App\Validator;
  */
 class LooseDateValidator extends AbstractValidator
 {
-    protected function isValid($value)
+    protected function isValid(mixed $value): mixed
     {
+        if (!is_string($value)) {
+            throw new \InvalidArgumentException('Argument $value must be a string');
+        }
         if (!preg_match('/^[0-9]+(-[0-9]{1,2}(-[0-9]{1,2})?)?$/', $value)) {
             throw new \Exception('The answer must be either "year", "year-month" or "year-month-day".');
         }
@@ -38,7 +41,7 @@ class LooseDateValidator extends AbstractValidator
                 break;
             case 3:
                 list($year, $month, $day) = $parts;
-                if (!checkdate($month, $day, $year)) {
+                if (!checkdate((int) $month, (int) $day, (int) $year)) {
                     throw new \Exception('The answer must be either "year", "year-month" or "year-month-day". C');
                 }
                 break;

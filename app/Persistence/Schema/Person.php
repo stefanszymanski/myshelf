@@ -1,13 +1,20 @@
 <?php
 
-namespace App\Domain\Type;
+namespace App\Persistence\Schema;
 
-use App\Database;
+use App\Persistence\Database;
+use App\Persistence\FieldType;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
-class Person extends AbstractType
+class Person extends AbstractSchema
 {
+
+    /**
+     * {@inheritDoc}
+     */
+    protected array $defaultListFields = ['name'];
+
     protected function configure(): void
     {
         // TODO more join fields: books-as-editor, publishers, publishers-as-editor
@@ -17,17 +24,17 @@ class Person extends AbstractType
             ->registerField(
                 name: 'firstname',
                 label: 'First name',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             )
             ->registerField(
                 name: 'lastname',
                 label: 'Last name',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             )
             ->registerField(
                 name: 'nationality',
                 label: 'Nationality',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             );
 
         // Virtual fields made of fields from the same record
@@ -35,20 +42,20 @@ class Person extends AbstractType
             ->registerField(
                 name: 'name',
                 label: 'Full name',
-                type: self::FIELD_TYPE_VIRTUAL,
+                type: FieldType::Virtual,
                 description: 'Last name and first name concatenated: `{lastname}, {firstname}`',
                 queryModifier: function (QueryBuilder $qb, string $fieldName) {
                     return $qb->select([$fieldName => ['CONCAT' => [', ', 'lastname', 'firstname']]]);
-                }
+                },
             )
             ->registerField(
                 name: 'name2',
                 label: 'Full name',
-                type: self::FIELD_TYPE_VIRTUAL,
+                type: FieldType::Virtual,
                 description: 'First name and last name concatenated: `{firstname} {lastname}`',
                 queryModifier: function (QueryBuilder $qb, string $fieldName) {
                     return $qb->select([$fieldName => ['CONCAT' => [' ', 'firstname', 'lastname']]]);
-                }
+                },
             );
 
         // Joined fields
@@ -56,11 +63,12 @@ class Person extends AbstractType
             ->registerField(
                 name: 'books',
                 label: 'Books',
-                type: self::FIELD_TYPE_JOINED,
+                type: FieldType::Joined,
                 description: 'Number of books the person is an author of',
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    $bookStore = $db->books()->store;
                     return $qb
-                        ->join(fn ($person) => $db->books()->findBy(['authors', 'CONTAINS', $person['key']]), '_books')
+                        ->join(fn ($person) => $bookStore->findBy(['authors', 'CONTAINS', $person['key']]), '_books')
                         ->select([$fieldName => ['LENGTH' => '_books']]);
                 }
             );
@@ -68,31 +76,31 @@ class Person extends AbstractType
         // Filters on real fields
         $this
             ->registerSimpleFilter(
-                name: 'firstname',
+                field: 'firstname',
                 operator: '=',
                 description: 'Exact match on first name',
                 queryModifier: fn ($value) => ['firstname', '=', $value],
             )
             ->registerSimpleFilter(
-                name: 'firstname',
+                field: 'firstname',
                 operator: '~',
                 description: 'Pattern match on first name',
                 queryModifier: fn ($value) => ['firstname', 'LIKE', $value],
             )
             ->registerSimpleFilter(
-                name: 'lastname',
+                field: 'lastname',
                 operator: '=',
                 description: 'Exact match on last name',
                 queryModifier: fn ($value) => ['lastname', '=', $value],
             )
             ->registerSimpleFilter(
-                name: 'lastname',
+                field: 'lastname',
                 operator: '~',
                 description: 'Pattern match on last name',
                 queryModifier: fn ($value) => ['lastname', 'LIKE', $value],
             )
             ->registerSimpleFilter(
-                name: 'nationality',
+                field: 'nationality',
                 operator: '=',
                 description: 'Exact match on nationality',
                 queryModifier: fn ($value) => ['nationality', '=', $value],
@@ -108,7 +116,7 @@ class Person extends AbstractType
         ];
         foreach ($operators as list($operator, $foreignOperator, $description)) {
             $this->registerJoinedStoreFilter2(
-                name: 'books',
+                field: 'books',
                 operator: $operator,
                 description: "Number of books authored $description",
                 foreignStore: fn (Database $db) => $db->getStore('books'),

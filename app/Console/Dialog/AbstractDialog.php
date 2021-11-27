@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Dialog;
 
-use App\Configuration;
-use App\Domain\Type\TypeInterface;
-use App\Repository;
+use App\Persistence\Database;
+use App\Persistence\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -15,27 +14,23 @@ abstract class AbstractDialog implements DialogInterface
     use DialogTrait;
     use CreateDialogTrait;
 
-    protected Repository $repository;
+    protected string $tableName;
 
-    protected TypeInterface $type;
+    protected Table $table;
 
-    protected string $typeName;
-
-    public function __construct(protected InputInterface $input, protected OutputInterface $output, protected Configuration $configuration)
+    public function __construct(protected InputInterface $input, protected OutputInterface $output, protected Database $db)
     {
         // Determine the type name from the class namespace.
         $classNameParts = array_reverse(explode('\\', static::class));
         if ($classNameParts[2] !== 'Dialog') {
             throw new \Exception('Dialogs that extend AbstractDialog must use a namespace like ".../Dialog/{type}/{classname}"');
         }
-        $this->typeName = strtolower($classNameParts[1]);
-        // Initialize repository and type.
-        $this->repository = $this->configuration->getRepository($this->typeName);
-        $this->type = $this->configuration->resolveType($this->typeName);
+        $this->tableName = strtolower($classNameParts[1]);
+        $this->table = $db->getTable($this->tableName);
     }
 
     /**
      * {@inheritDoc}
      */
-    abstract public function run(): array;
+    abstract public function run(array $defaults = []): array;
 }

@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Domain\Type;
+namespace App\Persistence\Schema;
 
-use App\Database;
+use App\Persistence\Database;
+use App\Persistence\FieldType;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
-class Publisher extends AbstractType
+class Publisher extends AbstractSchema
 {
     protected function configure(): void
     {
@@ -14,13 +15,13 @@ class Publisher extends AbstractType
             ->registerField(
                 name: 'name',
                 label: 'Name',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             )
             ->registerField(
                 name: 'books',
                 label: 'Books',
                 description: 'Number of books',
-                type: self::FIELD_TYPE_JOINED,
+                type: FieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
                     return $qb
                         ->join(fn ($publisher) => $db->books()->findBy(['publisher', '=', $publisher['key']]), '_books')
@@ -30,13 +31,13 @@ class Publisher extends AbstractType
 
         $this
             ->registerSimpleFilter(
-                name: 'name',
+                field: 'name',
                 operator: '=',
                 description: 'Exact match on name',
                 queryModifier: fn ($value) => ['name', '=', $value],
             )
             ->registerSimpleFilter(
-                name: 'name',
+                field: 'name',
                 operator: '~',
                 description: 'Pattern match on name',
                 queryModifier: fn ($value) => ['name', 'LIKE', $value],

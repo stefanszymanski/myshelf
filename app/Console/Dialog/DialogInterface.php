@@ -3,5 +3,5 @@ namespace App\Console\Dialog;
 
 interface DialogInterface
 {
-    public function run(): array;
+    public function run(array $defaults = []): array;
 }

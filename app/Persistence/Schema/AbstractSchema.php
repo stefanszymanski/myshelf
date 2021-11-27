@@ -1,16 +1,36 @@
 <?php
 
-namespace App\Domain\Type;
+namespace App\Persistence\Schema;
 
-use App\Database;
+use App\Persistence\Database;
+use App\Persistence\Field;
+use App\Persistence\FieldType;
+use App\Persistence\Filter;
+use App\Persistence\Reference;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
 
-abstract class AbstractType implements TypeInterface
+abstract class AbstractSchema implements Schema
 {
     public const FIELD_TYPE_REAL = 'real';
     public const FIELD_TYPE_VIRTUAL = 'virtual';
     public const FIELD_TYPE_JOINED = 'joined';
+
+    /**
+     * Default fields to use in the list view.
+     *
+     * @var array<string>
+     */
+    protected array $defaultListFields = ['id', 'key'];
+
+    /**
+     * Name of the schema.
+     *
+     * If empty it will be determined from the class name.
+     *
+     * @var ?string
+     */
+    protected ?string $name = null;
 
     /**
      * Registered fields and their configurations.
@@ -30,6 +50,8 @@ abstract class AbstractType implements TypeInterface
      */
     protected array $filters = [];
 
+    protected array $references = [];
+
     public function __construct()
     {
         // Register fields that all types have.
@@ -37,13 +59,13 @@ abstract class AbstractType implements TypeInterface
             ->registerField(
                 name: 'id',
                 label: 'ID',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
                 description: 'Auto generated unique numeric ID'
             )
             ->registerField(
                 name: 'key',
                 label: 'Key',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
                 description: 'Unique human-readable key'
             );
         $this->configure();
@@ -54,39 +76,34 @@ abstract class AbstractType implements TypeInterface
      */
     abstract protected function configure(): void;
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getFieldNames(): array
+    public function getLabel(): string
     {
-        return array_keys($this->fields);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function checkFieldNames(array $fields): array
-    {
-        return array_filter($fields, fn ($field) => !in_array($field, array_keys($this->fields)));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getFieldLabels(array $fields = null): array
-    {
-        if (!$fields) {
-            $labels = array_combine(
-                array_keys($this->fields),
-                array_column($this->fields, 'label')
-            );
-        } else {
-            $labels = [];
-            foreach ($fields as $field) {
-                $labels[$field] = $this->fields[$field]['label'];
-            }
+        // If no name is set, determine it from the class name.
+        if (!$this->name) {
+            $parts = array_reverse(explode('\\', static::class));
+            $this->name = array_pop($parts);
         }
-        return $labels;
+        return $this->name;
+    }
+
+    public function getFields(): array
+    {
+        return $this->fields;
+    }
+
+    public function getFilters(): array
+    {
+        return $this->filters;
+    }
+
+    public function getReferences(): array
+    {
+        return $this->references;
+    }
+
+    public function getDefaultListFields(): array
+    {
+        return $this->defaultListFields;
     }
 
     /**
@@ -104,46 +121,58 @@ abstract class AbstractType implements TypeInterface
         }, $this->fields);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function modifyQueryForFilter(Database $db, QueryBuilder $qb, string $fieldName, string $operator, $fieldValue): QueryBuilder
+    protected function registerReference(string $field, string $table, bool $multiple): self
     {
-        $config = $this->filters[$fieldName][$operator];
-        return $config['modifyQuery']($qb, $fieldValue, $db);
+        $this->references[$field] = new Reference($field, $table, $multiple);
+        return $this;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function modifyQueryForField(Database $db, QueryBuilder $qb, string $fieldName): QueryBuilder
-    {
-        $config = $this->fields[$fieldName];
-        return $config['modifyQuery']($qb, $fieldName, $db);
-    }
 
     /**
      * Register a new field.
      *
      * @param string $name Unique identifier of the field
      * @param string $label
-     * @param string $type Field type, must be one of the class constants that start with FIELD_TYPE_
+     * @param FieldType $type Field type, must be one of the class constants that start with FIELD_TYPE_
      * @param string|null $description
      * @param callable(QueryBuilder): QueryBuilder $queryModifier
      * @return self
      */
-    protected function registerField(string $name, string $label, string $type, ?string $description = null, callable $queryModifier = null): self
+    protected function registerField(string $name, string $label, FieldType $type, ?string $description = null, callable $queryModifier = null): self
     {
         if (!$queryModifier) {
             $queryModifier = fn (QueryBuilder $qb) => $qb->select([$name]);
         }
-        $this->fields[$name] = [
-            'name' => $name,
-            'label' => $label,
-            'type' => $type,
-            'description' => $description,
-            'modifyQuery' => $queryModifier
-        ];
+        $this->fields[$name] = new Field(
+            name: $name,
+            label: $label,
+            description: $description,
+            type: $type,
+            modifyQuery: $queryModifier
+        );
+        return $this;
+    }
+
+    /**
+     * Register a filter.
+     *
+     * @param string $name
+     * @param string $operator
+     * @param callable(QueryModifier, mixed, Database): QueryModifier The second argument is a user provided value to filter for
+     * @param string|null $description
+     * @return self
+     */
+    protected function registerFilter(string $field, string $operator, callable $queryModifier, string $description = null): self
+    {
+        if (!isset($this->filters[$field])) {
+            $this->filters[$field] = [];
+        }
+        $this->filters[$field][$operator] = new Filter(
+            field: $field,
+            operator: $operator,
+            description: $description,
+            modifyQuery: $queryModifier,
+        );
         return $this;
     }
 
@@ -158,10 +187,10 @@ abstract class AbstractType implements TypeInterface
      * @param string|null $description
      * @return self
      */
-    protected function registerSimpleFilter(string $name, string $operator, callable $queryModifier, string $description = null): self
+    protected function registerSimpleFilter(string $field, string $operator, callable $queryModifier, string $description = null): self
     {
         $this->registerFilter(
-            name: $name,
+            field: $field,
             operator: $operator,
             description: $description,
             queryModifier: function (QueryBuilder $qb, $value) use ($queryModifier) {
@@ -186,7 +215,7 @@ abstract class AbstractType implements TypeInterface
      *  4. checks for each foreign record if the value of `$foreignField` with `$foreignOperator` matches the user input
      *     until a foreign records matches.
      *
-     * @param string $name
+     * @param string $field
      * @param string $operator
      * @param callable(Database): Store $foreignStore Foreign store factory
      * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store
@@ -198,10 +227,10 @@ abstract class AbstractType implements TypeInterface
      * @param string|null $description
      * @return self
      */
-    protected function registerJoinedStoreFilter(string $name, string $operator, callable $foreignStore, callable $foreignCriteria, string|callable $foreignField, string $foreignOperator, string $description = null): self
+    protected function registerJoinedStoreFilter(string $field, string $operator, callable $foreignStore, callable $foreignCriteria, string|callable $foreignField, string $foreignOperator, string $description = null): self
     {
         return $this->registerFilter(
-            name: $name,
+            field: $field,
             operator: $operator,
             description: $description,
             queryModifier: function (QueryBuilder $qb, $filterValue, Database $db) use ($foreignStore, $foreignCriteria, $foreignField, $foreignOperator) {
@@ -251,10 +280,10 @@ abstract class AbstractType implements TypeInterface
      * @param string|null $description
      * @return self
      */
-    protected function registerJoinedStoreFilter2(string $name, string $operator, callable $foreignStore, callable $foreignCriteria, callable $foreignValue, string $foreignOperator, string $description = null): self
+    protected function registerJoinedStoreFilter2(string $field, string $operator, callable $foreignStore, callable $foreignCriteria, callable $foreignValue, string $foreignOperator, string $description = null): self
     {
         return $this->registerFilter(
-            name: $name,
+            field: $field,
             operator: $operator,
             description: $description,
             queryModifier: function (QueryBuilder $qb, $filterValue, Database $db) use ($foreignStore, $foreignCriteria, $foreignValue, $foreignOperator) {
@@ -265,27 +294,6 @@ abstract class AbstractType implements TypeInterface
                 }]);
             }
         );
-    }
-
-    /**
-     * Register a filter.
-     *
-     * @param string $name
-     * @param string $operator
-     * @param callable(QueryModifier, mixed, Database): QueryModifier The second argument is a user provided value to filter for
-     * @param string|null $description
-     * @return self
-     */
-    protected function registerFilter(string $name, string $operator, callable $queryModifier, string $description = null): self
-    {
-        if (!isset($this->filters[$name])) {
-            $this->filters[$name] = [];
-        }
-        $this->filters[$name][$operator] = [
-            'modifyQuery' => $queryModifier,
-            'description' => $description,
-        ];
-        return $this;
     }
 
     /**

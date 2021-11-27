@@ -1,31 +1,42 @@
 <?php
 
-namespace App\Domain\Type;
+namespace App\Persistence\Schema;
 
-use App\Database;
+use App\Persistence\Database;
+use App\Persistence\FieldType;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
-class Book extends AbstractType
+class Book extends AbstractSchema
 {
+    /**
+     * {@inheritDoc}
+     */
+    protected array $defaultListFields = ['title', 'authors'];
+
     protected function configure(): void
     {
+        // Registering references is important for detecting referring records when a record is deleted or its key changes
+        $this->registerReference('authors', 'person', true);
+        $this->registerReference('editors', 'person', true);
+        $this->registerReference('publisher', 'publisher', false);
+
         // Real fields
         $this
             ->registerField(
                 name: 'title',
                 label: 'Title',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             )
             ->registerField(
                 name: 'published',
                 label: 'Published',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             )
             ->registerField(
                 name: 'acquired',
                 label: 'Acquired',
-                type: self::FIELD_TYPE_REAL,
+                type: FieldType::Real,
             );
 
         // Joined fields
@@ -34,10 +45,11 @@ class Book extends AbstractType
                 name: 'publisher',
                 label: 'Publisher',
                 description: 'Name of the publisher',
-                type: self::FIELD_TYPE_JOINED,
+                type: FieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    $publisherStore = $db->publishers()->store;
                     return $qb
-                        ->join(fn ($book) => $db->publishers()->findBy(['key', '=', $book['publisher']]), '_publisher')
+                        ->join(fn ($book) => $publisherStore->findBy(['key', '=', $book['publisher']]), '_publisher')
                         ->select([$fieldName => '_publisher.0.name']);
                 },
             )
@@ -45,10 +57,11 @@ class Book extends AbstractType
                 name: 'authors',
                 label: 'Authors',
                 description: 'Names of the authors',
-                type: self::FIELD_TYPE_JOINED,
+                type: FieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    $personStore = $db->persons()->store;
                     return $qb
-                        ->join(fn ($book) => $db->persons()->findBy(['key', 'IN', $book['authors']]), '_authors')
+                        ->join(fn ($book) => $personStore->findBy(['key', 'IN', $book['authors']]), '_authors')
                         ->select([$fieldName => function ($book) {
                             $authors = array_map(fn ($author) => sprintf('%s %s', $author['firstname'], $author['lastname']), $book['_authors']);
                             return implode('; ', $authors);
@@ -59,10 +72,11 @@ class Book extends AbstractType
                 name: 'editors',
                 label: 'Editors',
                 description: 'Names of the editors',
-                type: self::FIELD_TYPE_JOINED,
+                type: FieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    $personStore = $db->persons()->store;
                     return $qb
-                        ->join(fn ($book) => $db->persons()->findBy(['key', 'IN', $book['editors']]), '_editors')
+                        ->join(fn ($book) => $personStore->findBy(['key', 'IN', $book['editors']]), '_editors')
                         ->select([$fieldName => function ($book) {
                             $editors = array_map(fn ($editor) => sprintf('%s %s', $editor['firstname'], $editor['lastname']), $book['_editors']);
                             return implode('; ', $editors);
@@ -76,19 +90,19 @@ class Book extends AbstractType
         // Filters on real fields
         $this
             ->registerSimpleFilter(
-                name: 'author',
+                field: 'author',
                 operator: '=',
                 description: 'Exact match on a authors key',
                 queryModifier: fn ($value) => ['authors', 'CONTAINS', $value]
             )
             ->registerSimpleFilter(
-                name: 'title',
+                field: 'title',
                 operator: '=',
                 description: 'Exact match on the title',
                 queryModifier: fn ($value) => ['title', '=', $value]
             )
             ->registerSimpleFilter(
-                name: 'title',
+                field: 'title',
                 operator: '~',
                 description: 'Pattern match on the title',
                 queryModifier: fn ($value) => ['title', 'LIKE', $value]
@@ -104,7 +118,7 @@ class Book extends AbstractType
         ];
         foreach ($operators as list($operator, $internalOperator, $description)) {
             $this->registerSimpleFilter(
-                name: 'published',
+                field: 'published',
                 operator: $operator,
                 description: "Publishing year $description",
                 queryModifier: fn ($value) => ['published', $internalOperator, $value],
@@ -122,7 +136,7 @@ class Book extends AbstractType
         foreach ($persons as list($field, $description, $criteria)) {
             $this
                 ->registerJoinedStoreFilter(
-                    name: "$field.lastname",
+                    field: "$field.lastname",
                     operator: '=',
                     description: "Exact match on $description last name",
                     foreignStore: $personStore,
@@ -131,7 +145,7 @@ class Book extends AbstractType
                     foreignOperator: '=',
                 )
                 ->registerJoinedStoreFilter(
-                    name: "$field.lastname",
+                    field: "$field.lastname",
                     operator: '~',
                     description: "Pattern match on $description last name",
                     foreignStore: $personStore,
@@ -140,7 +154,7 @@ class Book extends AbstractType
                     foreignOperator: 'LIKE',
                 )
                 ->registerJoinedStoreFilter(
-                    name: "$field.name",
+                    field: "$field.name",
                     operator: '~',
                     description: "Pattern match on $description full name",
                     foreignStore: $personStore,
@@ -155,7 +169,7 @@ class Book extends AbstractType
         $publisherCriteria = fn (array $book) => ['key', '=', $book['publisher']];
         $this
             ->registerJoinedStoreFilter(
-                name: 'publisher.name',
+                field: 'publisher.name',
                 operator: '=',
                 description: 'Exact match on the publishers name',
                 foreignStore: $publisherStore,
@@ -164,7 +178,7 @@ class Book extends AbstractType
                 foreignOperator: '='
             )
             ->registerJoinedStoreFilter(
-                name: 'publisher.name',
+                field: 'publisher.name',
                 operator: '~',
                 description: 'Pattern match on the publishers name',
                 foreignStore: $publisherStore,

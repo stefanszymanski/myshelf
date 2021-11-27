@@ -2,10 +2,9 @@
 
 namespace App\Commands;
 
-use App\Configuration;
 use App\Console\Dialog\CreateDialogTrait;
-use App\Domain\Type\TypeInterface;
-use App\Repository;
+use App\Persistence\Database;
+use App\Persistence\Table as PersistenceTable;
 use App\Utility\RecordUtility;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Formatter\OutputFormatter;
@@ -17,38 +16,35 @@ class AddCommand extends Command
 {
     use CreateDialogTrait;
 
-    protected Repository $repository;
-
-    protected TypeInterface $type;
-
-    protected $signature = 'add {type}';
+    protected $signature = 'add {table}';
 
     protected $description = 'Create a new record';
 
-    public function __construct(protected Configuration $configuration)
+    protected PersistenceTable $table;
+
+    public function __construct(protected Database $db)
     {
         parent::__construct();
     }
 
-    public function handle()
+    public function handle(): void
     {
-        $typeName = $this->argument('type');
-        $this->repository = $this->configuration->getRepository($typeName);
-        $this->type = $this->configuration->resolveType($typeName);
+        $tableName = $this->argument('table');
+        $this->table = $this->db->getTable($tableName);
 
-        $this->headline("New $typeName record");
+        $this->headline(sprintf('New %s record', $tableName));
 
-        $dialog = $this->getCreateDialog($typeName);
+        $dialog = $this->getCreateDialog($tableName);
         $record = $this->options();
 
         do {
             $record = $dialog->run($record);
             $this->output->writeln(' <info>You entered the following data:</info>');
-            $this->displayRecord($this->type->getFieldLabels(array_keys($record)), $record);
+            $this->displayRecord($this->table->getFieldLabels(array_keys($record)), $record);
             $repeat = $this->confirm('Do you want to change something?', false);
         } while ($repeat);
 
-        $this->repository->getStore()->insert($record);
+        $this->table->store->insert($record);
         $this->output->success('The record was created.');
     }
 

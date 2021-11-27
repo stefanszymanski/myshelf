@@ -2,8 +2,8 @@
 
 namespace App\Commands;
 
-use App\Configuration;
-use App\Domain\Type\AbstractType;
+use App\Persistence\Database;
+use App\Persistence\FieldType;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
@@ -12,36 +12,32 @@ use Symfony\Component\Console\Helper\TableSeparator;
 class DescribeCommand extends Command
 {
     const TYPE_LABELS = [
-        AbstractType::FIELD_TYPE_REAL => 'Real fields',
-        AbstractType::FIELD_TYPE_VIRTUAL => 'Virtual fields, made of values of the same table',
-        AbstractType::FIELD_TYPE_JOINED => 'Virtual fields, taken from references on other tables'
+        /* FieldType::Real => 'Real fields', */
+        /* FieldType::Virtual => 'Virtual fields, made of values of the same table', */
+        /* FieldType::Joined => 'Virtual fields, taken from references on other tables' */
     ];
 
-    protected $signature = 'desc {type}';
+    protected $signature = 'desc {table}';
 
     protected $description = 'Describe a record type';
 
-    /**
-     * Execute the console command.
-     *
-     * @return mixed
-     */
-    public function handle(Configuration $configuration)
+    public function __construct(protected Database $db)
     {
-        $typeName = $this->argument('type');
-        $type = $configuration->resolveType($typeName);
-        if (!$type) {
-            $this->error("Invalid type '$typeName'");
-            return;
-        }
+        parent::__construct();
+    }
+
+    public function handle()
+    {
+        $tableName = $this->argument('table');
+        $table = $this->db->getTable($tableName);
 
         // TODO rewrite table rendering
-        $info = $type->getFieldInfo();
+        $info = $table->getFieldInfo();
         $this->output->writeln("\n  Table fields (usable with --fields, --orderby and --groupby)");
         $this->renderTable(['Name', 'Label', 'Description'], $info, 'type');
 
         $this->output->writeln("\n  Filters (usable with --filter)");
-        $info = $type->getFilterInfo();
+        $info = $table->getFilterInfo();
         usort($info, fn (array $a, array $b) => $a['name'] <=> $b['name']);
         $this->renderTable(['Operator', 'Description'], $info, 'name');
     }

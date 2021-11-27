@@ -17,8 +17,11 @@ class NewKeyValidator extends AbstractValidator
     {
     }
 
-    protected function isValid($value)
+    protected function isValid(mixed $value): mixed
     {
+        if (!is_string($value)) {
+            throw new \InvalidArgumentException('Argument $value must be a string');
+        }
         if ($this->store->findOneBy(['key', '=', $value])) {
             throw new \Exception('This key is already used.');
         }

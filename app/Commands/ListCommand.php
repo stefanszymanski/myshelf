@@ -2,9 +2,7 @@
 
 namespace App\Commands;
 
-use App\Configuration;
-use App\Domain\Type\TypeInterface;
-use App\Repository;
+use App\Persistence\Database;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
@@ -12,11 +10,7 @@ use Symfony\Component\Console\Helper\TableSeparator;
 
 class ListCommand extends Command
 {
-    protected Repository $repository;
-
-    protected TypeInterface $type;
-
-    protected $signature = 'ls {type}
+    protected $signature = 'ls {table}
                             {--fields= : Fields to display, separated by comma}
                             {--orderby= : Field names to order by, separated by comma, may be prefixed with a ! for descending sorting}
                             {--groupby= : Field name to group by}
@@ -25,16 +19,14 @@ class ListCommand extends Command
 
     protected $description = 'List records';
 
-    public function __construct(protected Configuration $configuration)
+    public function __construct(protected Database $db)
     {
         parent::__construct();
     }
 
     public function handle()
     {
-        $typeName = $this->argument('type');
-        $this->repository = $this->configuration->getRepository($typeName);
-        $this->type = $this->configuration->resolveType($typeName);
+        $this->table = $this->db->getTable($this->argument('table'));
 
         $fields = $this->getFields();
         $orderBy = $this->getOrderBy();
@@ -43,15 +35,15 @@ class ListCommand extends Command
         // TODO move argument validation to an earlier point in the command dispatching process, if possible
         // Validate arguments --fields, --orderby and --groupby
         $error = false;
-        if ($fields && $invalidFields = $this->type->checkFieldNames($fields)) {
+        if ($fields && $invalidFields = $this->table->checkFieldNames($fields)) {
             $this->error(sprintf('Argument --fields contains invalid fields: %s', implode(', ', $invalidFields)));
             $error = true;
         }
-        if ($orderBy && $invalidOrderFields = $this->type->checkFieldNames(array_keys($orderBy))) {
+        if ($orderBy && $invalidOrderFields = $this->table->checkFieldNames(array_keys($orderBy))) {
             $this->error(sprintf('Argument --orderby contains invalid fields: %s', implode(', ', $invalidOrderFields)));
             $error = true;
         }
-        if ($groupBy && $this->type->checkFieldNames([$groupBy])) {
+        if ($groupBy && $this->table->checkFieldNames([$groupBy])) {
             $this->error(sprintf('Argument --groupby is not a valid field name'));
             $error = true;
         }
@@ -81,7 +73,7 @@ class ListCommand extends Command
             }
         }
 
-        $records = $this->repository->find($fields, $orderBy, $filters, $exceptFields);
+        $records = $this->table->find($fields, $orderBy, $filters, $exceptFields);
 
         $this->renderTable($fields, $records, $hiddenFields, $groupBy);
     }
@@ -127,7 +119,7 @@ class ListCommand extends Command
     {
         $_fields = $this->option('fields');
         if (empty($_fields)) {
-            $fields = $this->type->getDefaultListFields();
+            $fields = $this->table->getDefaultListFields();
         } else {
             $fields = array_filter(
                 array_map('trim', explode(',', $_fields))
@@ -139,7 +131,7 @@ class ListCommand extends Command
     protected function renderTable(array $fields, array $records, array $hiddenFields = [], string $groupBy = null)
     {
         $table = new Table($this->output);
-        $table->setHeaders($this->type->getFieldLabels(array_diff($fields, $hiddenFields)));
+        $table->setHeaders($this->table->getFieldLabels(array_diff($fields, $hiddenFields)));
         $table->setStyle('box');
         $table->getStyle()->setCellHeaderFormat('<comment>%s</comment>');
         $rows = $groupBy
