@@ -77,8 +77,9 @@ class ListCommand extends Command
         }
 
         $records = $this->table->find($fields, $orderBy, $filters, $exceptFields);
+        $headers = $this->table->getFieldLabels(array_diff($fields, $hiddenFields));
 
-        $this->renderTable($fields, $records, $hiddenFields, $groupBy);
+        $this->renderTable($headers, $records, $hiddenFields, $groupBy);
     }
 
     /**
@@ -134,18 +135,16 @@ class ListCommand extends Command
     /**
      * Display a table for the given records.
      *
-     * TODO replace $fields with $labels, because the are only used for retrieving those
-
-     * @param array<string> $fields
+     * @param array<string> $headers
      * @param array<array<string,mixed>> $records Records to display
      * @param array<string> $hiddenFields Fields that may be included in the records, but should not be displayed
      * @param string|null $groupBy Field name to group by
      * @return void
      */
-    protected function renderTable(array $fields, array $records, array $hiddenFields = [], string $groupBy = null): void
+    protected function renderTable(array $headers, array $records, array $hiddenFields = [], string $groupBy = null): void
     {
         $table = new ConsoleTable($this->output);
-        $table->setHeaders($this->table->getFieldLabels(array_diff($fields, $hiddenFields)));
+        $table->setHeaders($headers);
         $table->setStyle('box');
         $table->getStyle()->setCellHeaderFormat('<comment>%s</comment>');
         $rows = $groupBy
