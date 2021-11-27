@@ -2,15 +2,16 @@
 
 namespace App\Utility;
 
+use Symfony\Component\String\UnicodeString;
+
 class RecordUtility
 {
     static public function createKey(?string ...$parts): string
     {
-        // TODO replace umlaute and similar characters instead of removing them
-        // TODO remove doubled dashes
         $parts = array_filter($parts);
         $key = strtolower(implode('-', $parts));
-        $key = preg_replace('/[^a-z0-9 -]/', '', $key);
+        $key = (new UnicodeString($key))->ascii();
+        $key = preg_replace('/-+/', '-', $key);
         $key = preg_replace('/[ ]/', '-', $key);
         return $key;
     }
