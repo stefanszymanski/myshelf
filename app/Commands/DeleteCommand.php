@@ -21,7 +21,7 @@ class DeleteCommand extends Command
         parent::__construct();
     }
 
-    public function handle()
+    public function handle(): void
     {
         $tableName = $this->argument('table');
         $keys = $this->argument('key');

@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
+use SleekDB\QueryBuilder;
+
 class Filter
 {
-    protected $queryModifier;
+    /**
+     * @var callable
+     */
+    protected mixed $queryModifier;
 
     public function __construct(
         public readonly string $field,
@@ -14,6 +19,7 @@ class Filter
         callable $modifyQuery,
         public readonly ?string $description = null,
     ) {
+        $this->queryModifier = $modifyQuery;
     }
 
     public function modifyQuery(QueryBuilder $qb, string $fieldName, Database $db): QueryBuilder

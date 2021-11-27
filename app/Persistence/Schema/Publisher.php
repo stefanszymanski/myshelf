@@ -23,8 +23,9 @@ class Publisher extends AbstractSchema
                 description: 'Number of books',
                 type: FieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
+                    $bookStore = $db->books()->store;
                     return $qb
-                        ->join(fn ($publisher) => $db->books()->findBy(['publisher', '=', $publisher['key']]), '_books')
+                        ->join(fn ($publisher) => $bookStore->findBy(['publisher', '=', $publisher['key']]), '_books')
                         ->select([$fieldName => ['LENGTH' => '_books']]);
                 }
             );
@@ -69,10 +70,7 @@ class Publisher extends AbstractSchema
     }
 
     /**
-     * Parse the user input from the record selection into record default values.
-     *
-     * @param string $value The user input
-     * @return array Record defaults
+     * {@inheritDoc}
      */
     public function getDefaultsFromAutocompleteInput(string $value): array
     {

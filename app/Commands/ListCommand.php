@@ -3,8 +3,9 @@
 namespace App\Commands;
 
 use App\Persistence\Database;
+use App\Persistence\Table;
 use LaravelZero\Framework\Commands\Command;
-use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\Table as ConsoleTable;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 
@@ -19,12 +20,14 @@ class ListCommand extends Command
 
     protected $description = 'List records';
 
+    protected Table $table;
+
     public function __construct(protected Database $db)
     {
         parent::__construct();
     }
 
-    public function handle()
+    public function handle(): void
     {
         $this->table = $this->db->getTable($this->argument('table'));
 
@@ -128,9 +131,20 @@ class ListCommand extends Command
         return $fields;
     }
 
-    protected function renderTable(array $fields, array $records, array $hiddenFields = [], string $groupBy = null)
+    /**
+     * Display a table for the given records.
+     *
+     * TODO replace $fields with $labels, because the are only used for retrieving those
+
+     * @param array<string> $fields
+     * @param array<array<string,mixed>> $records Records to display
+     * @param array<string> $hiddenFields Fields that may be included in the records, but should not be displayed
+     * @param string|null $groupBy Field name to group by
+     * @return void
+     */
+    protected function renderTable(array $fields, array $records, array $hiddenFields = [], string $groupBy = null): void
     {
-        $table = new Table($this->output);
+        $table = new ConsoleTable($this->output);
         $table->setHeaders($this->table->getFieldLabels(array_diff($fields, $hiddenFields)));
         $table->setStyle('box');
         $table->getStyle()->setCellHeaderFormat('<comment>%s</comment>');
@@ -141,6 +155,14 @@ class ListCommand extends Command
         $table->render();
     }
 
+    /**
+     * Group the given records and create table rows with group headers.
+     *
+     * @param array<array<string,mixed>> $records
+     * @param string $groupBy
+     * @param array<string> $hiddenFields Fields that may be included in the records, but should not be displayed
+     * @return array<array<mixed>|TableCell>
+     */
     protected function createGroupedTableRows(array $records, string $groupBy, array $hiddenFields = [])
     {
         $groupedRows = [];

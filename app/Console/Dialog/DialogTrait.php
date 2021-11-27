@@ -4,17 +4,33 @@ declare(strict_types=1);
 
 namespace App\Console\Dialog;
 
+use App\Persistence\Database;
+use App\Persistence\Table;
 use App\Validator\NewKeyValidator;
 use App\Validator\NotEmptyValidator;
 use SleekDB\Store;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 trait DialogTrait
 {
+    protected InputInterface $input;
+
+    protected SymfonyStyle $output;
+
+    protected Database $db;
+
+    protected Table $table;
+
     /**
-     * Prompt the user for input.
+     * Ask a question.
+     *
+     * @param string $question
+     * @param mixed $default
+     * @return mixed
      */
-    protected function ask(string $question, $default = null)
+    protected function ask(string $question, mixed $default = null): mixed
     {
         return $this->output->ask($question, $default);
     }
@@ -33,8 +49,12 @@ trait DialogTrait
 
     /**
      * Ask a question until the answer is not empty.
+     *
+     * @param string $question
+     * @param mixed $default
+     * @return mixed
      */
-    protected function askMandatory(string $question, $default = null)
+    protected function askMandatory(string $question, mixed $default = null): mixed
     {
         return $this->askWithValidation($question, [new NotEmptyValidator], $default);
     }
@@ -44,10 +64,15 @@ trait DialogTrait
      *
      * The key must not be empty and must be unique inside a given store.
      * If no store is given `$this->store` is used.
+     *
+     * @param string $question
+     * @param string|null $default
+     * @param Store $store
+     * @return null|string
      */
-    protected function askForKey(string $question, ?string $default = null, Store $store = null)
+    protected function askForKey(string $question, ?string $default = null, Store $store = null): ?string
     {
-        $store = $store ?? $this->repository->getStore();
+        $store = $store ?? $this->table->store;
         return $this->askWithValidation($question, [new NewKeyValidator($store)], $default);
     }
 
@@ -57,8 +82,9 @@ trait DialogTrait
      * @param string $question
      * @param array<callable> $validators
      * @param string|null $default
+     * @return mixed
      */
-    protected function askWithValidation(string $question, array $validators, ?string $default = null)
+    protected function askWithValidation(string $question, array $validators, ?string $default = null): mixed
     {
         return $this->output->ask($question, $default, function ($answer) use ($validators) {
             foreach ($validators as $validator) {
@@ -73,7 +99,7 @@ trait DialogTrait
      *
      * @param string $type Type of the record to ask for
      * @param string $propertyName The name of the property that is used in prompts
-     * @return string Key of the selected record
+     * @return string|null Key of the selected record
      */
     protected function askForRecord(string $type, string $propertyName): ?string
     {
@@ -88,7 +114,7 @@ trait DialogTrait
      *
      * @param string $type Type of the record to ask for
      * @param string $propertyName The name of the property that is used in prompts
-     * @return array List of record keys
+     * @return array<string> List of record keys
      */
     protected function askForRecords(string $type, string $propertyName): array
     {
@@ -107,12 +133,22 @@ trait DialogTrait
         return $results;
     }
 
-    private function _askForRecord(string $typeName, string $question, string $propertyName): ?string
+    /**
+     * Ask for a record with autocompletion.
+     *
+     * If the user inputs a value that is not in the autocomplete options,
+     * it is asked if a new record may be created. If the user confirms,
+     * a create dialog is started and the key of this newly created record gets returned.
+     *
+     * @param string $tableName
+     * @param string $question
+     * @param string $fieldName
+     * @return string|null Key of the selected record
+     */
+    private function _askForRecord(string $tableName, string $question, string $fieldName): ?string
     {
-        $type = $this->configuration->resolveType($typeName);
-        $store = $this->configuration->getRepository($typeName)->getStore();
-        // TODO is the Type class a good place for creating autocomplete options?
-        $options = $type->getAutocompleteOptions($store);
+        $table = $this->db->getTable($tableName);
+        $options = $table->getAutocompleteOptions();
         list($exists, $value) = $this->askWithAutocompletion($question, $options);
         if ($exists) {
             // If the record exists, use it.
@@ -122,18 +158,18 @@ trait DialogTrait
             $result = null;
         } else {
             // If the selected record doesn't exist, ask if it should be created.
-            if (!$this->confirm("The selected $propertyName doesn't exist. Do you want to create it?", true)) {
+            if (!$this->confirm("The selected $fieldName doesn't exist. Do you want to create it?", true)) {
                 // If the user doesn't want to add a record, discard the user input and return null.
                 $result = null;
             } else {
                 // Create a new record.
-                $this->note(sprintf('Suspend %s creation, start creating a new %s', $this->typeName, $typeName));
-                $defaults = $type->getDefaultsFromAutocompleteInput($value);
-                $dialog = $this->getCreateDialog($typeName);
+                $this->note(sprintf('Suspend %s creation, start creating a new %s', $this->table->name, $table->name));
+                $defaults = $table->getDefaultsFromAutocompleteInput($value);
+                $dialog = $this->getCreateDialog($tableName);
                 $record = $dialog->run($defaults);
-                $store->insert($record);
+                $table->store->insert($record);
                 $result = $record['key'];
-                $this->note(sprintf('Finished %s creation, resume creating the %s', $typeName, $this->typeName));
+                $this->note(sprintf('Finished %s creation, resume creating the %s', $table->name, $this->table->name));
             }
         }
         return $result;

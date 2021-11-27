@@ -97,6 +97,13 @@ class Table
      * Query related methods
      * *********************/
 
+    /**
+     * @param array<string> $fields
+     * @param array<string,string> $orderBy
+     * @param array<array{string,string,string}> $filters
+     * @param array<string> $excludeFields
+     * @return array<array<string,mixed>>>
+     */
     public function find(array $fields, array $orderBy = [], array $filters = [], array $excludeFields = []): array
     {
         $qb = $this->store->createQueryBuilder();
@@ -104,16 +111,32 @@ class Table
         foreach ($fields as $fieldName) {
             $this->modifyQueryForField($qb, $fieldName);
         }
-        /* foreach ($filters as list($fieldName, $operator, $fieldValue)) { */
-        /*     $qb = $this->type->modifyQueryForFilter($qb, $fieldName, $operator, $fieldValue); */
-        /* } */
-        /* $qb->orderBy($orderBy); */
+        foreach ($filters as list($fieldName, $operator, $fieldValue)) {
+            $qb = $this->modifyQueryForFilter($qb, $fieldName, $operator, $fieldValue);
+        }
+        $qb->orderBy($orderBy);
         return $qb->getQuery()->fetch();
     }
 
-    protected function getFilter(string $name, string $operator)
+    /**
+     * Get all filters.
+     *
+     * @return array<Filter>
+     */
+    public function getFilters(): array
     {
-        return $this->schema->getFilters()[$fieldName][$operator];
+        $filters = [];
+        foreach ($this->schema->getFilters() as $fieldName => $fieldFilters) {
+            foreach ($fieldFilters as $fieldFilter) {
+                $filters[] = $fieldFilter;
+            }
+        }
+        return $filters;
+    }
+
+    protected function getFilter(string $field, string $operator): Filter
+    {
+        return $this->schema->getFilters()[$field][$operator];
     }
 
     protected function modifyQueryForField(QueryBuilder $qb, string $fieldName): QueryBuilder
@@ -122,10 +145,10 @@ class Table
         return $field->modifyQuery($qb, $fieldName, $this->db);
     }
 
-    protected function modifyQueryForFilter(QueryBuilder $qb, string $fieldName, string $operator, $fieldValue): QueryBuilder
+    protected function modifyQueryForFilter(QueryBuilder $qb, string $fieldName, string $operator, mixed $fieldValue): QueryBuilder
     {
         $filter = $this->getFilter($fieldName, $operator);
-        return $filter->modifyQuery($qb, $fieldValue, $db);
+        return $filter->modifyQuery($qb, $fieldValue, $this->db);
     }
 
 
@@ -133,6 +156,9 @@ class Table
      * Reference related methods
      * *************************/
 
+    /**
+     * @return array<Reference>
+     */
     public function getReferences(): array
     {
         return $this->schema->getReferences();
@@ -141,9 +167,8 @@ class Table
     /**
      * Find records referring the specified record
      *
-     * @param string $targetType Type of the referenced record
      * @param string $key Key of the references record
-     * @return array<string,array> Key is {type}.{field}, value is the referring record
+     * @return array<string,array<string,mixed>> Key is {type}.{field}, value is the referring record
      */
     public function findReferringRecords(string $key): array
     {
@@ -163,6 +188,10 @@ class Table
         return $records;
     }
 
+    /**
+     * @param string $targetTableName
+     * @return array<Reference>
+     */
     private function findReferences(string $targetTableName): array
     {
         $references = [];
@@ -175,5 +204,26 @@ class Table
             }
         }
         return $references;
+    }
+
+    /**
+     * Get autocomplete options for a record selection dialog.
+     *
+     * @return array<string,string> Key is the autocomplete text, value is a record key
+     */
+    public function getAutocompleteOptions(): array
+    {
+        return $this->schema->getAutocompleteOptions($this->store);
+    }
+
+    /**
+     * Parse the user input from record selection dialog into record default values.
+     *
+     * @param string $value
+     * @return array<string,mixed>
+     */
+    public function getDefaultsFromAutocompleteInput(string $value): array
+    {
+        return $this->schema->getDefaultsFromAutocompleteInput($input);
     }
 }

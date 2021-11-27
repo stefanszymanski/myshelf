@@ -9,7 +9,10 @@ use SleekDB\QueryBuilder;
 
 class Field
 {
-    protected $queryModifier;
+    /**
+     * @var callable
+     */
+    protected mixed $queryModifier;
 
     public function __construct(
         public readonly string $name,
@@ -21,6 +24,12 @@ class Field
         $this->queryModifier = $modifyQuery;
     }
 
+    /**
+     * @param QueryBuilder $qb
+     * @param string $fieldName
+     * @param Database $db
+     * @return QueryBuilder
+     */
     public function modifyQuery(QueryBuilder $qb, string $fieldName, Database $db): QueryBuilder
     {
         return call_user_func($this->queryModifier, $qb, $fieldName, $db);

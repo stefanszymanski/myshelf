@@ -119,7 +119,7 @@ class Person extends AbstractSchema
                 field: 'books',
                 operator: $operator,
                 description: "Number of books authored $description",
-                foreignStore: fn (Database $db) => $db->getStore('books'),
+                foreignStore: fn (Database $db) => $db->books()->store,
                 foreignCriteria: fn (array $person) => ['authors', 'CONTAINS', $person['key']],
                 foreignValue: fn (array $books) => count($books),
                 foreignOperator: $foreignOperator,
@@ -136,11 +136,13 @@ class Person extends AbstractSchema
     }
 
     /**
-     * Build autocomplete options.
+     * Get autocomplete options for a record selection dialog.
      *
      * Fetches all persons and build two autocomplete options for each:
      * {firstname} {lastname}
      * {lastname}, {firstname}
+     *
+     * {@inheritDoc}
      */
     public function getAutocompleteOptions(Store $store): array
     {
@@ -157,12 +159,9 @@ class Person extends AbstractSchema
     }
 
     /**
-     * Parse the user input from a record selection into record default values.
+     * Splits the user input into firstname and lastname.
      *
-     * Splits the input into firstname and lastname.
-     *
-     * @param string $value The user input
-     * @return array Record defaults
+     * {@inheritDoc}
      */
     public function getDefaultsFromAutocompleteInput(string $value): array
     {

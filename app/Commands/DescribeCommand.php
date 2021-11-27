@@ -3,20 +3,17 @@
 namespace App\Commands;
 
 use App\Persistence\Database;
+use App\Persistence\Field;
 use App\Persistence\FieldType;
+use App\Persistence\Filter;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 
+// TODO refactor or rewrite
 class DescribeCommand extends Command
 {
-    const TYPE_LABELS = [
-        /* FieldType::Real => 'Real fields', */
-        /* FieldType::Virtual => 'Virtual fields, made of values of the same table', */
-        /* FieldType::Joined => 'Virtual fields, taken from references on other tables' */
-    ];
-
     protected $signature = 'desc {table}';
 
     protected $description = 'Describe a record type';
@@ -26,38 +23,51 @@ class DescribeCommand extends Command
         parent::__construct();
     }
 
-    public function handle()
+    public function handle(): void
     {
         $tableName = $this->argument('table');
         $table = $this->db->getTable($tableName);
 
         // TODO rewrite table rendering
-        $info = $table->getFieldInfo();
+        $info = array_map((function(Field $field) {
+            return [
+                'name' => $field->name,
+                'label' => $field->label,
+                'description' => $field->description,
+                'type' => $this->getFieldTypeLabel($field->type),
+            ];
+        })->bindTo($this), $table->getFields());
         $this->output->writeln("\n  Table fields (usable with --fields, --orderby and --groupby)");
         $this->renderTable(['Name', 'Label', 'Description'], $info, 'type');
 
         $this->output->writeln("\n  Filters (usable with --filter)");
-        $info = $table->getFilterInfo();
+        $info = array_map(function(Filter $filter) {
+            return [
+                'name' => $filter->field,
+                'operator' => $filter->operator,
+                'description' => $filter->description,
+            ];
+        }, $table->getFilters());
         usort($info, fn (array $a, array $b) => $a['name'] <=> $b['name']);
         $this->renderTable(['Operator', 'Description'], $info, 'name');
     }
 
-    protected function renderTable(array $headers, array $records, string $groupBy)
+    protected function renderTable(array $headers, array $rows, string $groupBy): void
     {
         $table = new Table($this->output);
         $table->setHeaders($headers);
         $table->setStyle('box');
-        $rows = $this->createGroupedTableRows($records, $groupBy);
+        $rows = $this->createGroupedTableRows($rows, $groupBy);
         $table->setRows($rows);
         $table->render();
     }
 
-    protected function createGroupedTableRows(array $records, string $groupBy)
+    protected function createGroupedTableRows(array $rows, string $groupBy): array
     {
         $groupedRows = [];
         $colspan = 0;
         // Split records into groups.
-        foreach ($records as $record) {
+        foreach ($rows as $record) {
             $groupValue = $record[$groupBy];
             if (!array_key_exists($groupValue, $groupedRows)) {
                 $groupedRows[$groupValue] = [];
@@ -82,5 +92,14 @@ class DescribeCommand extends Command
             $groupCounter++;
         }
         return $rows;
+    }
+
+    protected function getFieldTypeLabel(FieldType $type): string
+    {
+        return match ($type) {
+            FieldType::Real => 'Real fields',
+            FieldType::Virtual => 'Virtual fields, made of values of the same table',
+            FieldType::Joined => 'Virtual fields, taken from references on other tables' ,
+        };
     }
 }

@@ -126,7 +126,7 @@ class Book extends AbstractSchema
         }
 
         // Filters on persons, i.e. authors and editors (join the person store)
-        $personStore = fn (Database $db) => $db->getStore('persons');
+        $personStore = fn (Database $db) => $db->persons()->store;
         $authorCriteria = fn (array $book) => ['key', 'IN', $book['authors']];
         $editorCriteria = fn (array $book) => ['key', 'IN', $book['editors']];
         $persons = [
@@ -165,7 +165,7 @@ class Book extends AbstractSchema
         }
 
         // Filters on publisher (join the publisher store)
-        $publisherStore = fn (Database $db) => $db->getStore('publishers');
+        $publisherStore = fn (Database $db) => $db->publishers()->store;
         $publisherCriteria = fn (array $book) => ['key', '=', $book['publisher']];
         $this
             ->registerJoinedStoreFilter(
@@ -197,11 +197,11 @@ class Book extends AbstractSchema
     }
 
     /**
-     * Build autocomplete options.
+     * {@inheritDoc}
      */
     public function getAutocompleteOptions(Store $store): array
     {
-        $records = $this->db->books()->createQueryBuilder()
+        $records = $store->createQueryBuilder()
             ->select(['key', 'title'])
             ->getQuery()
             ->fetch();
@@ -213,10 +213,7 @@ class Book extends AbstractSchema
     }
 
     /**
-     * Parse the user input from the record selection into record default values.
-     *
-     * @param string $value The user input
-     * @return array Record defaults
+     * {@inheritDoc}
      */
     public function getDefaultsFromAutocompleteInput(string $value): array
     {

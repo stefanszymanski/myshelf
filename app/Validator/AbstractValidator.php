@@ -6,7 +6,7 @@ abstract class AbstractValidator
 {
     protected bool $allowEmpty = true;
 
-    public function validate($value)
+    public function validate(mixed $value): mixed
     {
         if (empty($value)) {
             if ($this->allowEmpty) {
@@ -18,12 +18,12 @@ abstract class AbstractValidator
         return $this->isValid($value);
     }
 
-    protected function isValid($value)
+    protected function isValid(mixed $value): mixed
     {
         return $value;
     }
 
-    public function __invoke($value)
+    public function __invoke(mixed $value): mixed
     {
         return $this->validate($value);
     }

@@ -9,7 +9,7 @@ trait CreateDialogTrait
     /**
      * Get a Create Dialog for the given type.
      *
-     * @param string $type
+     * @param string $tableName
      * @return DialogInterface
      */
     protected function getCreateDialog(string $tableName): DialogInterface

@@ -9,6 +9,7 @@ use App\Persistence\Filter;
 use App\Persistence\Reference;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
+use SleekDB\Store;
 
 abstract class AbstractSchema implements Schema
 {
@@ -33,23 +34,28 @@ abstract class AbstractSchema implements Schema
     protected ?string $name = null;
 
     /**
-     * Registered fields and their configurations.
+     * Registered fields
      *
      * @see self::registerField()
      *
-     * @var array<string, array{name:string,label:string,description:string,type:string,queryModifier:callable(QueryBuilder):QueryBuilder}
+     * @var array<string,Field>
      */
     protected array $fields = [];
 
     /**
-     * Registered filters and their configurations.
+     * Registered filters
      *
      * @see self::registerFilter()
      *
-     * @var array<string,array<string,array{description:string,queryModifier:callable(QueryBuilder,mixed,Database):QueryModifier}>>
+     * @var array<string,array<string,Filter>>
      */
     protected array $filters = [];
 
+    /**
+     * Registered references
+     *
+     * @var array<string,Reference>
+     */
     protected array $references = [];
 
     public function __construct()
@@ -86,41 +92,45 @@ abstract class AbstractSchema implements Schema
         return $this->name;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getFields(): array
     {
         return $this->fields;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getFilters(): array
     {
         return $this->filters;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getReferences(): array
     {
         return $this->references;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getDefaultListFields(): array
     {
         return $this->defaultListFields;
     }
 
     /**
-     * {@inheritDoc}
+     * Register a reference.
+     *
+     * @param string $field
+     * @param string $table
+     * @param bool $multiple
      */
-    public function getFieldInfo(): array
-    {
-        return array_map(function ($field) {
-            return [
-                'name' => $field['name'],
-                'label' => $field['label'],
-                'description' => $field['description'],
-                'type' => $field['type'],
-            ];
-        }, $this->fields);
-    }
-
     protected function registerReference(string $field, string $table, bool $multiple): self
     {
         $this->references[$field] = new Reference($field, $table, $multiple);
@@ -135,7 +145,7 @@ abstract class AbstractSchema implements Schema
      * @param string $label
      * @param FieldType $type Field type, must be one of the class constants that start with FIELD_TYPE_
      * @param string|null $description
-     * @param callable(QueryBuilder): QueryBuilder $queryModifier
+     * @param callable(QueryBuilder,string,Database): QueryBuilder $queryModifier
      * @return self
      */
     protected function registerField(string $name, string $label, FieldType $type, ?string $description = null, callable $queryModifier = null): self
@@ -156,9 +166,9 @@ abstract class AbstractSchema implements Schema
     /**
      * Register a filter.
      *
-     * @param string $name
+     * @param string $field
      * @param string $operator
-     * @param callable(QueryModifier, mixed, Database): QueryModifier The second argument is a user provided value to filter for
+     * @param callable(QueryBuilder,mixed,Database):QueryBuilder $queryModifier The second argument is a user provided value to filter for
      * @param string|null $description
      * @return self
      */
@@ -181,9 +191,9 @@ abstract class AbstractSchema implements Schema
      *
      * The filter is identified by the combination of $name and $operator.
      *
-     * @param string $name
+     * @param string $field
      * @param string $operator
-     * @param callable(QueryBuilder, mixed, Database): QueryBuilder $queryModifier Second argument is a user provided value to filter for
+     * @param callable(mixed):array<mixed> $queryModifier Callable that receives user input and returns a SleekDB Criteria
      * @param string|null $description
      * @return self
      */
@@ -217,12 +227,12 @@ abstract class AbstractSchema implements Schema
      *
      * @param string $field
      * @param string $operator
-     * @param callable(Database): Store $foreignStore Foreign store factory
-     * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store
-     *                                                       and returns a list of records of the joined store
-     * @param string|callable(array): mixed $foreignField Either the field name of a foreign store or a callable
-     *                                                    that is called with each foreign record and returns some value
-     *                                                    that is compared against the user input
+     * @param callable(Database):Store $foreignStore Foreign store factory
+     * @param callable(array<string,mixed>):array<mixed> $foreignCriteria Is called with a record of the original store
+     *                                                    and returns a SleekDB criteria
+     * @param string|callable(array<string,mixed>):mixed $foreignField Either the field name of a foreign store or a callable
+     *                                                                  that is called with each foreign record and returns some value
+     *                                                                  that is compared against the user input
      * @param string $foreignOperator A operator that is supported by ConditionsHandler::verifyCondition()
      * @param string|null $description
      * @return self
@@ -269,13 +279,13 @@ abstract class AbstractSchema implements Schema
      *  4. calls `$foreignValue` to get the value that is compared against the user input
      *  5. returns whether the value returned by `$foreignValue` and `$foreignOperator` matches the user input
      *
-     * @param string $name
+     * @param string $field
      * @param string $operator
      * @param callable(Database): Store $foreignStore Foreign store factory
-     * @param callable(array): array<array> $foreignCriteria Is called with a record of the original store
-     *                                                       and returns a list of records of the joined store
-     * @param callable(array<array>): mixed $foreignValue Is called with all foreign records at once
-     *                                                    and returns the value that is compared against the user input
+     * @param callable(array<string,mixed>): array<mixed> $foreignCriteria Is called with a record of the original store
+     *                                                                     and returns a SleekDB criteria
+     * @param callable(array<array<string,mixed>>): mixed $foreignValue Is called with all foreign records at once
+     *                                                                  and returns the value that is compared against the user input
      * @param string $foreignOperator A operator that is supported by ConditionsHandler::verifyCondition()
      * @param string|null $description
      * @return self
@@ -294,23 +304,5 @@ abstract class AbstractSchema implements Schema
                 }]);
             }
         );
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getFilterInfo(): array
-    {
-        $info = [];
-        foreach ($this->filters as $name => $operators) {
-            foreach ($operators as $operator => $filterConfiguration) {
-                $info[] = [
-                    'name' => $name,
-                    'operator' => $operator,
-                    'description' => $filterConfiguration['description'],
-                ];
-            }
-        }
-        return $info;
     }
 }

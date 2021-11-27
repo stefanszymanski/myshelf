@@ -9,9 +9,12 @@ use App\Utility\RecordUtility;
 
 class CreateDialog extends AbstractDialog
 {
+    /**
+     * {@inheritDoc}
+     */
     public function run(array $defaults = []): array
     {
-        $labels = $this->type->getFieldLabels(['key', 'name']);
+        $labels = $this->table->getFieldLabels(['key', 'name']);
 
         $name = $this->askMandatory($labels['name'], $defaults['name'] ?? null);
         $defaultKey = RecordUtility::createKey($name);

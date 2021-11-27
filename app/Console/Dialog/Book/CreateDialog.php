@@ -11,6 +11,9 @@ use App\Validator\LooseDateValidator;
 
 class CreateDialog extends AbstractDialog
 {
+    /**
+     * {@inheritDoc}
+     */
     public function run(array $defaults = []): array
     {
         $title = $this->askMandatory('Title', $defaults['title'] ?? null);
@@ -20,7 +23,7 @@ class CreateDialog extends AbstractDialog
         $editors = $this->askForRecords('person', 'editor');
         $publisher = $this->askForRecord('publisher', 'publisher');
 
-        $published = $this->askWithValidation('Published', [new IntegerValidator], $default['published'] ?? null);
+        $published = $this->askWithValidation('Published', [new IntegerValidator], $defaults['published'] ?? null);
         $acquired = $this->askWithValidation('Acquired', [new LooseDateValidator], $defaults['acquired'] ?? null);
 
         $defaultKey = RecordUtility::createKey($authors[0] ?? $editors[0] ?? null, $title);

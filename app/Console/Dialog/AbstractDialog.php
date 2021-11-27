@@ -7,7 +7,7 @@ namespace App\Console\Dialog;
 use App\Persistence\Database;
 use App\Persistence\Table;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 abstract class AbstractDialog implements DialogInterface
 {
@@ -18,7 +18,7 @@ abstract class AbstractDialog implements DialogInterface
 
     protected Table $table;
 
-    public function __construct(protected InputInterface $input, protected OutputInterface $output, protected Database $db)
+    public function __construct(protected InputInterface $input, protected SymfonyStyle $output, protected Database $db)
     {
         // Determine the type name from the class namespace.
         $classNameParts = array_reverse(explode('\\', static::class));
