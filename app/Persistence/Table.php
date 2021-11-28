@@ -180,7 +180,7 @@ class Table
                 ? 'CONTAINS'
                 : '=';
             $referringRecords = $referringStore->createQueryBuilder()
-                ->select(['id', 'key', 'authors'])
+                ->select(['id', 'key'])
                 ->where([$reference->foreignField, $operator, $key])
                 ->getQuery()
                 ->fetch();
