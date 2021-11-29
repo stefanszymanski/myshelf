@@ -4,12 +4,16 @@ namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
 use App\Persistence\Field;
+use App\Persistence\QueryField;
 use App\Persistence\FieldType;
 use App\Persistence\Filter;
 use App\Persistence\Reference;
+use App\Persistence\ReferenceField;
+use App\Utility\RecordUtility;
+use App\Validator\NotEmptyValidator;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
-use SleekDB\Store;
+use Symfony\Component\Console\Question\Question;
 
 abstract class AbstractSchema implements Schema
 {
@@ -34,13 +38,29 @@ abstract class AbstractSchema implements Schema
     protected ?string $label = null;
 
     /**
-     * Registered fields
+     * List of field names for the creation of record keys.
      *
-     * @see self::registerField()
+     * This property must be set or `self::createKeyForRecord()` must be overwritten.
+     *
+     * @var array<string>
+     */
+    protected array $keyFields = [];
+
+    /**
+     * Registered table fields
      *
      * @var array<string,Field>
      */
     protected array $fields = [];
+
+    /**
+     * Registered query fields
+     *
+     * @see self::registerQueryField()
+     *
+     * @var array<string,QueryField>
+     */
+    protected array $queryFields = [];
 
     /**
      * Registered filters
@@ -62,13 +82,13 @@ abstract class AbstractSchema implements Schema
     {
         // Register fields that all types have.
         $this
-            ->registerField(
+            ->registerQueryField(
                 name: 'id',
                 label: 'ID',
                 type: FieldType::Real,
                 description: 'Auto generated unique numeric ID'
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'key',
                 label: 'Key',
                 type: FieldType::Real,
@@ -103,6 +123,14 @@ abstract class AbstractSchema implements Schema
     /**
      * {@inheritDoc}
      */
+    public function getQueryFields(): array
+    {
+        return $this->queryFields;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function getFilters(): array
     {
         return $this->filters;
@@ -121,7 +149,22 @@ abstract class AbstractSchema implements Schema
      */
     public function getDefaultListFields(): array
     {
-        return $this->defaultListFields;
+        return $this->defaultListFields ?: ['id', 'key'];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function createKeyForRecord(array $record): string
+    {
+        if (empty($this->keyFields)) {
+            throw new \Exception(sprintf('Either %1$s::$keyFields must be set or %1$s::createKeyForRecord() must be overwritten', static::class));
+        }
+        $fields = [];
+        foreach ($this->keyFields as $field) {
+            $fields[] = $record[$field];
+        }
+        return RecordUtility::createKey(...$fields);
     }
 
     /**
@@ -142,6 +185,48 @@ abstract class AbstractSchema implements Schema
         return $this;
     }
 
+    protected function registerField(string $name, string $label, bool $required = false, ?callable $question = null, array|callable $validator = [], ?callable $formatter = null, ?string $description = null)
+    {
+        if (!is_array($validator)) {
+            $validator = [$validator];
+        }
+        if ($required) {
+            $validator[] = fn () => new NotEmptyValidator;
+        }
+        $this->fields[] = new Field(
+            table: $this->tableName,
+            name: $name,
+            label: $label,
+            description: $description,
+            question: $question,
+            validators: $validator,
+            formatter: $formatter,
+        );
+        return $this;
+    }
+
+    protected function registerReferenceField(string $name, string $foreignTable, bool $multiple, string $label, bool $required = false, ?callable $formatter = null, ?string $description = null)
+    {
+        if ($required) {
+            $validators[] = fn () => new NotEmptyValidator;
+        }
+        $this->fields[] = new ReferenceField(
+            table: $this->tableName,
+            name: $name,
+            foreignTable: $foreignTable,
+            multiple: $multiple,
+            label: $label,
+            description: $description,
+            formatter: $formatter,
+        );
+        return $this;
+    }
+
+    public function getFields2(): array
+    {
+        return $this->fields;
+    }
+
 
     /**
      * Register a new field.
@@ -153,12 +238,12 @@ abstract class AbstractSchema implements Schema
      * @param callable(QueryBuilder,string,Database): QueryBuilder $queryModifier
      * @return self
      */
-    protected function registerField(string $name, string $label, FieldType $type, ?string $description = null, callable $queryModifier = null): self
+    protected function registerQueryField(string $name, string $label, FieldType $type, ?string $description = null, callable $queryModifier = null): self
     {
         if (!$queryModifier) {
             $queryModifier = fn (QueryBuilder $qb) => $qb->select([$name]);
         }
-        $this->fields[$name] = new Field(
+        $this->queryFields[$name] = new QueryField(
             name: $name,
             label: $label,
             description: $description,

@@ -4,6 +4,9 @@ namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
 use App\Persistence\FieldType;
+use App\Utility\RecordUtility;
+use App\Validator\IntegerValidator;
+use App\Validator\LooseDateValidator;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
@@ -14,8 +17,55 @@ class Book extends AbstractSchema
      */
     protected array $defaultListFields = ['title', 'authors'];
 
+    public function createKeyForRecord(array $record): string
+    {
+        return RecordUtility::createKey($record['authors'][0] ?? $record['editors'][0] ?? $record['publisher'], $record['title']);
+    }
+
+    protected function configureFields(): void
+    {
+        $this
+            ->registerField(
+                name: 'title',
+                label: 'Title',
+                required: true,
+            )
+            ->registerField(
+                name: 'published',
+                label: 'Published',
+                validator: fn () => new IntegerValidator,
+            )
+            ->registerField(
+                name: 'acquired',
+                label: 'Acquired',
+                validator: fn () => new LooseDateValidator,
+            )
+            ->registerReferenceField(
+                name: 'authors',
+                foreignTable: 'person',
+                multiple: true,
+                label: 'Authors',
+            )
+            ->registerReferenceField(
+                name: 'editors',
+                foreignTable: 'person',
+                multiple: true,
+                label: 'Editors',
+            )
+            ->registerReferenceField(
+                name: 'publisher',
+                foreignTable: 'publisher',
+                multiple: false,
+                label: 'Publisher',
+            );
+
+
+    }
+
     protected function configure(): void
     {
+        $this->configureFields();
+
         // Registering references is important for detecting referring records when a record is deleted or its key changes
         $this->registerReference('authors', 'person', true);
         $this->registerReference('editors', 'person', true);
@@ -23,17 +73,17 @@ class Book extends AbstractSchema
 
         // Real fields
         $this
-            ->registerField(
+            ->registerQueryField(
                 name: 'title',
                 label: 'Title',
                 type: FieldType::Real,
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'published',
                 label: 'Published',
                 type: FieldType::Real,
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'acquired',
                 label: 'Acquired',
                 type: FieldType::Real,
@@ -41,7 +91,7 @@ class Book extends AbstractSchema
 
         // Joined fields
         $this
-            ->registerField(
+            ->registerQueryField(
                 name: 'publisher',
                 label: 'Publisher',
                 description: 'Name of the publisher',
@@ -53,7 +103,7 @@ class Book extends AbstractSchema
                         ->select([$fieldName => '_publisher.0.name']);
                 },
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'authors',
                 label: 'Authors',
                 description: 'Names of the authors',
@@ -68,7 +118,7 @@ class Book extends AbstractSchema
                         }]);
                 },
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'editors',
                 label: 'Editors',
                 description: 'Names of the editors',

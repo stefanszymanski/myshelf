@@ -4,34 +4,51 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
-use App\Persistence\FieldType;
-use SleekDB\QueryBuilder;
+use App\Utility\RecordUtility;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 class Field
 {
-    /**
-     * @var callable
-     */
-    protected mixed $queryModifier;
-
     public function __construct(
+        public readonly string $table,
         public readonly string $name,
         public readonly string $label,
-        public readonly FieldType $type,
-        callable $modifyQuery,
         public readonly ?string $description = null,
+        protected ?\Closure $question = null,
+        protected array $validators = [],
+        protected ?\Closure $formatter = null,
     ) {
-        $this->queryModifier = $modifyQuery;
     }
 
-    /**
-     * @param QueryBuilder $qb
-     * @param string $fieldName
-     * @param Database $db
-     * @return QueryBuilder
-     */
-    public function modifyQuery(QueryBuilder $qb, string $fieldName, Database $db): QueryBuilder
+    public function ask(InputInterface $input, SymfonyStyle $output, Database $db, mixed $defaultAnswer = null): mixed
     {
-        return call_user_func($this->queryModifier, $qb, $fieldName, $db);
+        if (!$this->question) {
+            $question = $this->createDefaultQuestion($defaultAnswer);
+            return $output->askQuestion($question);
+        }
+        return $defaultAnswer;
+    }
+
+    public function valueToString(mixed $value): string
+    {
+        return $this->formatter
+            ? call_user_func($this->formatter, $value)
+            : RecordUtility::convertToString($value);
+    }
+
+    protected function createDefaultQuestion(mixed $defaultAnswer = null): Question
+    {
+        $question = new Question($this->label, $defaultAnswer);
+        if (!empty($this->validators)) {
+            $question->setValidator((function($answer) {
+                foreach ($this->validators as $validatorFactory) {
+                    $answer = call_user_func($validatorFactory)($answer);
+                }
+                return $answer;
+            })->bindTo($this));
+        }
+        return $question;
     }
 }

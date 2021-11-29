@@ -27,7 +27,6 @@ class LooseDateValidator extends AbstractValidator
             throw new \Exception('The answer must be either "year", "year-month" or "year-month-day".');
         }
         $parts = explode('-', $value);
-        var_dump($parts);
 
         switch (count($parts)) {
             case 1:

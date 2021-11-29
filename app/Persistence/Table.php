@@ -23,24 +23,45 @@ class Table
         return $this->schema->getLabel();
     }
 
+    /**
+     * Create a default key for a record.
+     *
+     * @param array<string,mixed> A record
+     * @return string A record key
+     */
+    public function createKeyForRecord(array $record): string
+    {
+        $key = $this->schema->createKeyForRecord($record);
+        if (!$key) {
+            throw new \Exception('Could not create a default record key');
+        }
+        return $key;
+    }
+
 
     /* *********************
      * Field related methods
      * *********************/
 
+    // TODO rename method to getFields(), rename getFields() to getQueryFields()
+    public function getFields2(): array
+    {
+        return $this->schema->getFields2();
+    }
+
     /**
-     * @return array<Field>
+     * @return array<QueryField>
      */
     public function getFields(): array
     {
-        return $this->schema->getFields();
+        return $this->schema->getQueryFields();
     }
 
     /**
      * @param string $name
-     * @return Field
+     * @return QueryField
      */
-    public function getField(string $name): Field
+    public function getField(string $name): QueryField
     {
         return $this->getFields()[$name];
     }
@@ -227,6 +248,6 @@ class Table
      */
     public function getDefaultsFromAutocompleteInput(string $value): array
     {
-        return $this->schema->getDefaultsFromAutocompleteInput($input);
+        return $this->schema->getDefaultsFromAutocompleteInput($value);
     }
 }

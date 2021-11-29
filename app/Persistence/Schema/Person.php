@@ -9,29 +9,39 @@ use SleekDB\Store;
 
 class Person extends AbstractSchema
 {
-
     /**
      * {@inheritDoc}
      */
     protected array $defaultListFields = ['name'];
 
+    /**
+     * {@inheritDoc}
+     */
+    protected array $keyFields = ['firstname', 'lastname'];
+
     protected function configure(): void
     {
+        // Register data fields
+        $this
+            ->registerField('firstname', 'First name', false)
+            ->registerField('lastname', 'Last name', true)
+            ->registerField('nationality', 'Nationality', false);
+
         // TODO more join fields: books-as-editor, publishers, publishers-as-editor
 
         // Real fields
         $this
-            ->registerField(
+            ->registerQueryField(
                 name: 'firstname',
                 label: 'First name',
                 type: FieldType::Real,
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'lastname',
                 label: 'Last name',
                 type: FieldType::Real,
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'nationality',
                 label: 'Nationality',
                 type: FieldType::Real,
@@ -39,7 +49,7 @@ class Person extends AbstractSchema
 
         // Virtual fields made of fields from the same record
         $this
-            ->registerField(
+            ->registerQueryField(
                 name: 'name',
                 label: 'Full name',
                 type: FieldType::Virtual,
@@ -48,7 +58,7 @@ class Person extends AbstractSchema
                     return $qb->select([$fieldName => ['CONCAT' => [', ', 'lastname', 'firstname']]]);
                 },
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'name2',
                 label: 'Full name',
                 type: FieldType::Virtual,
@@ -60,7 +70,7 @@ class Person extends AbstractSchema
 
         // Joined fields
         $this
-            ->registerField(
+            ->registerQueryField(
                 name: 'books',
                 label: 'Books',
                 type: FieldType::Joined,
@@ -125,14 +135,6 @@ class Person extends AbstractSchema
                 foreignOperator: $foreignOperator,
             );
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getDefaultListFields(): array
-    {
-        return ['name'];
     }
 
     /**

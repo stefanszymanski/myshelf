@@ -9,15 +9,28 @@ use SleekDB\Store;
 
 class Publisher extends AbstractSchema
 {
+    protected array $keyFields = ['name'];
+
     protected function configure(): void
     {
         $this
             ->registerField(
                 name: 'name',
+                label: 'Full name',
+                required: true
+            )
+            ->registerField(
+                name: 'shortname',
+                label: 'Short name',
+            );
+
+        $this
+            ->registerQueryField(
+                name: 'name',
                 label: 'Name',
                 type: FieldType::Real,
             )
-            ->registerField(
+            ->registerQueryField(
                 name: 'books',
                 label: 'Books',
                 description: 'Number of books',

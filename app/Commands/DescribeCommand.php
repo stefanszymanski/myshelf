@@ -3,7 +3,7 @@
 namespace App\Commands;
 
 use App\Persistence\Database;
-use App\Persistence\Field;
+use App\Persistence\QueryField;
 use App\Persistence\FieldType;
 use App\Persistence\Filter;
 use LaravelZero\Framework\Commands\Command;
@@ -29,7 +29,7 @@ class DescribeCommand extends Command
         $table = $this->db->getTable($tableName);
 
         // TODO rewrite table rendering
-        $info = array_map((function(Field $field) {
+        $info = array_map((function(QueryField $field) {
             return [
                 'name' => $field->name,
                 'label' => $field->label,

@@ -2,7 +2,7 @@
 
 namespace App\Commands;
 
-use App\Console\Dialog\CreateDialogTrait;
+use App\Console\Dialog\CreateDialog;
 use App\Persistence\Database;
 use App\Persistence\Table as PersistenceTable;
 use App\Utility\RecordUtility;
@@ -14,8 +14,6 @@ use Symfony\Component\Console\Helper\TableStyle;
 
 class AddCommand extends Command
 {
-    use CreateDialogTrait;
-
     protected $signature = 'add {table}';
 
     protected $description = 'Create a new record';
@@ -34,12 +32,14 @@ class AddCommand extends Command
 
         $this->headline(sprintf('New %s record', $tableName));
 
-        $dialog = $this->getCreateDialog($tableName);
+        $dialog = new CreateDialog($this->input, $this->output, $this->db, $this->table);
         $record = $this->options();
 
         do {
             $record = $dialog->run($record);
+            // TODO refactor line
             $this->output->writeln(' <info>You entered the following data:</info>');
+            // TODO move displayRecord() to a separate class
             $this->displayRecord($this->table->getFieldLabels(array_keys($record)), $record);
             $repeat = $this->confirm('Do you want to change something?', false);
         } while ($repeat);

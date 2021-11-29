@@ -13,6 +13,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+// TODO remove as soon as all functionality is moved to other classes
 trait DialogTrait
 {
     protected InputInterface $input;

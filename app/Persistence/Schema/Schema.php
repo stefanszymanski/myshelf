@@ -2,7 +2,7 @@
 
 namespace App\Persistence\Schema;
 
-use App\Persistence\Field;
+use App\Persistence\QueryField;
 use App\Persistence\Filter;
 use App\Persistence\Reference;
 use SleekDB\Store;
@@ -19,9 +19,9 @@ interface Schema
     /**
      * Get all fields.
      *
-     * @return array<Field>
+     * @return array<QueryField>
      */
-    public function getFields(): array;
+    public function getQueryFields(): array;
 
     /**
      * Get all filters.
@@ -59,4 +59,12 @@ interface Schema
      * @return array<string,mixed>
      */
     public function getDefaultsFromAutocompleteInput(string $value): array;
+
+    /**
+     * Create a default record key from record fields.
+     *
+     * @param array<string,mixed> A record
+     * @return string A record key
+     */
+    public function createKeyForRecord(array $record): string;
 }
