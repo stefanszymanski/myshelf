@@ -3,9 +3,9 @@
 namespace App\Commands;
 
 use App\Persistence\Database;
-use App\Persistence\QueryField;
-use App\Persistence\FieldType;
-use App\Persistence\Filter;
+use App\Persistence\Query\Field as QueryField;
+use App\Persistence\Query\Filter as QueryFilter;
+use App\Persistence\Query\FieldType as QueryFieldType;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
@@ -29,7 +29,7 @@ class DescribeCommand extends Command
         $table = $this->db->getTable($tableName);
 
         // TODO rewrite table rendering
-        $info = array_map((function(QueryField $field) {
+        $info = array_map((function (QueryField $field) {
             return [
                 'name' => $field->name,
                 'label' => $field->label,
@@ -41,7 +41,7 @@ class DescribeCommand extends Command
         $this->renderTable(['Name', 'Label', 'Description'], $info, 'type');
 
         $this->output->writeln("\n  Filters (usable with --filter)");
-        $info = array_map(function(Filter $filter) {
+        $info = array_map(function (QueryFilter $filter) {
             return [
                 'name' => $filter->field,
                 'operator' => $filter->operator,
@@ -94,12 +94,12 @@ class DescribeCommand extends Command
         return $rows;
     }
 
-    protected function getFieldTypeLabel(FieldType $type): string
+    protected function getFieldTypeLabel(QueryFieldType $type): string
     {
         return match ($type) {
-            FieldType::Real => 'Real fields',
-            FieldType::Virtual => 'Virtual fields, made of values of the same table',
-            FieldType::Joined => 'Virtual fields, taken from references on other tables' ,
+            QueryFieldType::Real => 'Real fields',
+            QueryFieldType::Virtual => 'Virtual fields, made of values of the same table',
+            QueryFieldType::Joined => 'Virtual fields, taken from references on other tables',
         };
     }
 }

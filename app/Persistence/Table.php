@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
+use App\Persistence\Query\Field as QueryField;
+use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Schema\Schema;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
@@ -142,7 +144,7 @@ class Table
     /**
      * Get all filters.
      *
-     * @return array<Filter>
+     * @return array<QueryFilter>
      */
     public function getFilters(): array
     {
@@ -155,7 +157,7 @@ class Table
         return $filters;
     }
 
-    protected function getFilter(string $field, string $operator): Filter
+    protected function getFilter(string $field, string $operator): QueryFilter
     {
         return $this->schema->getFilters()[$field][$operator];
     }

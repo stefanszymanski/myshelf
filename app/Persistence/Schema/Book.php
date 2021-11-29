@@ -3,7 +3,7 @@
 namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
-use App\Persistence\FieldType;
+use App\Persistence\Query\FieldType as QueryFieldType;
 use App\Utility\RecordUtility;
 use App\Validator\IntegerValidator;
 use App\Validator\LooseDateValidator;
@@ -76,17 +76,17 @@ class Book extends AbstractSchema
             ->registerQueryField(
                 name: 'title',
                 label: 'Title',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             )
             ->registerQueryField(
                 name: 'published',
                 label: 'Published',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             )
             ->registerQueryField(
                 name: 'acquired',
                 label: 'Acquired',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             );
 
         // Joined fields
@@ -95,7 +95,7 @@ class Book extends AbstractSchema
                 name: 'publisher',
                 label: 'Publisher',
                 description: 'Name of the publisher',
-                type: FieldType::Joined,
+                type: QueryFieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
                     $publisherStore = $db->publishers()->store;
                     return $qb
@@ -107,7 +107,7 @@ class Book extends AbstractSchema
                 name: 'authors',
                 label: 'Authors',
                 description: 'Names of the authors',
-                type: FieldType::Joined,
+                type: QueryFieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
                     $personStore = $db->persons()->store;
                     return $qb
@@ -122,7 +122,7 @@ class Book extends AbstractSchema
                 name: 'editors',
                 label: 'Editors',
                 description: 'Names of the editors',
-                type: FieldType::Joined,
+                type: QueryFieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
                     $personStore = $db->persons()->store;
                     return $qb

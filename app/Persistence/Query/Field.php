@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Persistence;
+namespace App\Persistence\Query;
 
-use App\Persistence\FieldType;
+use App\Persistence\Database;
 use SleekDB\QueryBuilder;
 
-// TODO rename to .\Query\Field
-class QueryField
+class Field
 {
     /**
      * @var callable

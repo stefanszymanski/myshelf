@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Persistence;
+namespace App\Persistence\Query;
 
+use App\Persistence\Database;
 use SleekDB\QueryBuilder;
 
-// TODO rename to .\Query\Filter
 class Filter
 {
     /**

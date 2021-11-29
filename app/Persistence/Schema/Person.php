@@ -3,7 +3,7 @@
 namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
-use App\Persistence\FieldType;
+use App\Persistence\Query\FieldType as QueryFieldType;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
@@ -34,17 +34,17 @@ class Person extends AbstractSchema
             ->registerQueryField(
                 name: 'firstname',
                 label: 'First name',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             )
             ->registerQueryField(
                 name: 'lastname',
                 label: 'Last name',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             )
             ->registerQueryField(
                 name: 'nationality',
                 label: 'Nationality',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             );
 
         // Virtual fields made of fields from the same record
@@ -52,7 +52,7 @@ class Person extends AbstractSchema
             ->registerQueryField(
                 name: 'name',
                 label: 'Full name',
-                type: FieldType::Virtual,
+                type: QueryFieldType::Virtual,
                 description: 'Last name and first name concatenated: `{lastname}, {firstname}`',
                 queryModifier: function (QueryBuilder $qb, string $fieldName) {
                     return $qb->select([$fieldName => ['CONCAT' => [', ', 'lastname', 'firstname']]]);
@@ -61,7 +61,7 @@ class Person extends AbstractSchema
             ->registerQueryField(
                 name: 'name2',
                 label: 'Full name',
-                type: FieldType::Virtual,
+                type: QueryFieldType::Virtual,
                 description: 'First name and last name concatenated: `{firstname} {lastname}`',
                 queryModifier: function (QueryBuilder $qb, string $fieldName) {
                     return $qb->select([$fieldName => ['CONCAT' => [' ', 'firstname', 'lastname']]]);
@@ -73,7 +73,7 @@ class Person extends AbstractSchema
             ->registerQueryField(
                 name: 'books',
                 label: 'Books',
-                type: FieldType::Joined,
+                type: QueryFieldType::Joined,
                 description: 'Number of books the person is an author of',
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
                     $bookStore = $db->books()->store;

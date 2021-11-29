@@ -3,7 +3,7 @@
 namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
-use App\Persistence\FieldType;
+use App\Persistence\Query\FieldType as QueryFieldType;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
@@ -28,13 +28,13 @@ class Publisher extends AbstractSchema
             ->registerQueryField(
                 name: 'name',
                 label: 'Name',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
             )
             ->registerQueryField(
                 name: 'books',
                 label: 'Books',
                 description: 'Number of books',
-                type: FieldType::Joined,
+                type: QueryFieldType::Joined,
                 queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
                     $bookStore = $db->books()->store;
                     return $qb

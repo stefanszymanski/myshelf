@@ -2,8 +2,8 @@
 
 namespace App\Persistence\Schema;
 
-use App\Persistence\QueryField;
-use App\Persistence\Filter;
+use App\Persistence\Query\Field as QueryField;
+use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Reference;
 use SleekDB\Store;
 
@@ -26,7 +26,7 @@ interface Schema
     /**
      * Get all filters.
      *
-     * @return array<string,array<string,Filter>>
+     * @return array<string,array<string,QueryFilter>>
      */
     public function getFilters(): array;
 

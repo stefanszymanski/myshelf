@@ -4,16 +4,15 @@ namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
 use App\Persistence\Field;
-use App\Persistence\QueryField;
-use App\Persistence\FieldType;
-use App\Persistence\Filter;
+use App\Persistence\Query\Field as QueryField;
+use App\Persistence\Query\Filter as QueryFilter;
+use App\Persistence\Query\FieldType as QueryFieldType;
 use App\Persistence\Reference;
 use App\Persistence\ReferenceField;
 use App\Utility\RecordUtility;
 use App\Validator\NotEmptyValidator;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
-use Symfony\Component\Console\Question\Question;
 
 abstract class AbstractSchema implements Schema
 {
@@ -67,7 +66,7 @@ abstract class AbstractSchema implements Schema
      *
      * @see self::registerFilter()
      *
-     * @var array<string,array<string,Filter>>
+     * @var array<string,array<string,QueryFilter>>
      */
     protected array $filters = [];
 
@@ -85,13 +84,13 @@ abstract class AbstractSchema implements Schema
             ->registerQueryField(
                 name: 'id',
                 label: 'ID',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
                 description: 'Auto generated unique numeric ID'
             )
             ->registerQueryField(
                 name: 'key',
                 label: 'Key',
-                type: FieldType::Real,
+                type: QueryFieldType::Real,
                 description: 'Unique human-readable key'
             );
         $this->configure();
@@ -233,12 +232,12 @@ abstract class AbstractSchema implements Schema
      *
      * @param string $name Unique identifier of the field
      * @param string $label
-     * @param FieldType $type Field type, must be one of the class constants that start with FIELD_TYPE_
+     * @param QueryFieldType $type Field type, must be one of the class constants that start with FIELD_TYPE_
      * @param string|null $description
      * @param callable(QueryBuilder,string,Database): QueryBuilder $queryModifier
      * @return self
      */
-    protected function registerQueryField(string $name, string $label, FieldType $type, ?string $description = null, callable $queryModifier = null): self
+    protected function registerQueryField(string $name, string $label, QueryFieldType $type, ?string $description = null, callable $queryModifier = null): self
     {
         if (!$queryModifier) {
             $queryModifier = fn (QueryBuilder $qb) => $qb->select([$name]);
@@ -267,7 +266,7 @@ abstract class AbstractSchema implements Schema
         if (!isset($this->filters[$field])) {
             $this->filters[$field] = [];
         }
-        $this->filters[$field][$operator] = new Filter(
+        $this->filters[$field][$operator] = new QueryFilter(
             field: $field,
             operator: $operator,
             description: $description,
