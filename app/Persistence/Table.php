@@ -46,6 +46,9 @@ class Table
      * *********************/
 
     // TODO rename method to getFields(), rename getFields() to getQueryFields()
+    /**
+     * @return array<Field>
+     */
     public function getFields2(): array
     {
         return $this->schema->getFields2();
@@ -139,6 +142,19 @@ class Table
         }
         $qb->orderBy($orderBy);
         return $qb->getQuery()->fetch();
+    }
+
+    /**
+     * Find a record by its key or ID.
+     *
+     * @param string|int $keyOrId Key or ID of a record
+     * @return array|null Either a record if one is found or null
+     */
+    public function findByKeyOrId(string|int $keyOrId): ?array
+    {
+        return ctype_digit($keyOrId)
+            ? $this->store->findById($keyOrId)
+            : $this->store->findOneBy(['key', '=', $keyOrId]);
     }
 
     /**

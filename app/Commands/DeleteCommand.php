@@ -8,7 +8,7 @@ use LaravelZero\Framework\Commands\Command;
 
 class DeleteCommand extends Command
 {
-    protected $signature = 'rm {table} {key?*}
+    protected $signature = 'rm {table : Table name} {key?* : Record key or ID}
                             {--f|filter=* : Filter expression: <field><operator><value>}
                             {--d|delete-records : Delete referring records without confirmation}
                             {--r|derefer-records : Remove references from referring records}
@@ -23,6 +23,7 @@ class DeleteCommand extends Command
         parent::__construct();
     }
 
+    // TODO move functionality to another class. It's required in the EditDialog, because it allows to delete a record.
     public function handle(): void
     {
         if (!$this->validateArguments()) {
@@ -96,6 +97,7 @@ class DeleteCommand extends Command
 
     protected function getKeys(): array
     {
+        // TODO replace resolving of keys/ids by Table::findByKeyOrId()
         $table = $this->getTable();
         $keys = [];
         $invalidKeys = [];

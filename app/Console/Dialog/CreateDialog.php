@@ -21,7 +21,7 @@ class CreateDialog
      * @param array<string,mixed> $defaults
      * @return array<string,mixed>
      */
-    public function run(array $defaults = []): array
+    public function render(array $defaults = []): array
     {
         $fields = $this->table->getFields2();
         $record = [];

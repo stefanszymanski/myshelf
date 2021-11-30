@@ -11,11 +11,12 @@ use Symfony\Component\Console\Helper\TableSeparator;
 
 class ListCommand extends Command
 {
-    protected $signature = 'ls {table}
+    protected $signature = 'ls {table : Table name}
                             {--fields= : Fields to display, separated by comma}
                             {--orderby= : Field names to order by, separated by comma, may be prefixed with a ! for descending sorting}
                             {--groupby= : Field name to group by}
                             {--filter=* : Filter expression: <field><operator><value>}
+                            {--format=table : Valid formats are: table, csv, json}
     ';
 
     protected $description = 'List records';
@@ -27,6 +28,11 @@ class ListCommand extends Command
         parent::__construct();
     }
 
+    // TODO move list rendering to another class
+    // TODO implement --format
+    // TODO add short version of arguments
+    // TODO return error code from all commands when an error occured
+    // TODO remove suffix Command from all commands
     public function handle(): void
     {
         $this->table = $this->db->getTable($this->argument('table'));

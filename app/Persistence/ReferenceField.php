@@ -106,7 +106,7 @@ class ReferenceField extends Field
                 $this->output->note(sprintf('Suspend %s creation, start creating a new %s', $this->table, $this->foreignTable));
                 $defaults = $table->getDefaultsFromAutocompleteInput($value);
                 $dialog = new CreateDialog($this->input, $this->output, $this->db, $table);
-                $record = $dialog->run($defaults);
+                $record = $dialog->render($defaults);
                 $table->store->insert($record);
                 $result = $record['key'];
                 $this->output->note(sprintf('Finished %s creation, resume creating the %s', $this->foreignTable, $this->table));
