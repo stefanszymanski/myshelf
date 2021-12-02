@@ -44,8 +44,11 @@ class RecordView
 
     public function renderEditTable(array $record, ?array $newRecord = null): void
     {
+        // TODO comment code of this class
+        // TODO highlight cleared fields for better visibility, currently their values are just empty
         $fields = $this->table->getFields2();
         $dataRows = array_map(
+            // TODO better String reprensentation of references, maybe add a method to Schema for returning a default title
             fn (Field $field) => [$field->label, $field->valueToString($record[$field->name] ?? null)],
             $fields
         );

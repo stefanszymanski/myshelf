@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Persistence;
 
 use App\Utility\RecordUtility;
+use App\Validator\ValidationException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -22,6 +23,15 @@ class Field
     ) {
     }
 
+    /**
+     * Ask the user for a value.
+     *
+     * @param InputInterface $input
+     * @param SymfonyStyle $output
+     * @param Database $db
+     * @param mixed $defaultAnswer
+     * @return mixed
+     */
     public function ask(InputInterface $input, SymfonyStyle $output, Database $db, mixed $defaultAnswer = null): mixed
     {
         if (!$this->question) {
@@ -31,6 +41,33 @@ class Field
         return $defaultAnswer;
     }
 
+    /**
+     * Check whether a value is allowed by the field.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    public function validate(mixed $value): bool
+    {
+        // TODO doesnt work with ReferenceField because it doesnt have a property $validators
+        //      How to solve this problem? Clearing multi-reference fields shouldnt clear all references, but let the user select
+        //      which references to remove.
+        try {
+            foreach ($this->validators as $validatorFactory) {
+                call_user_func($validatorFactory)($value);
+            }
+        } catch (ValidationException $e) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Convert a value to a printable representation.
+     *
+     * @param mixed $value
+     * @return string
+     */
     public function valueToString(mixed $value): string
     {
         return $this->formatter

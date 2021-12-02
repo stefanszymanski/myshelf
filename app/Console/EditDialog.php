@@ -32,6 +32,8 @@ class EditDialog
         // Let the user edit the record until he exits.
         $newRecord = $record;
         do {
+            // TODO add [R]eset all fields,
+            // TODO streamline action keys with those from EditReferencesDialog
             // Check if the record is new or a persisted one, because new records can't get deleted.
             $isExistingRecord = isset($record['id']);
             $supportedActions = $isExistingRecord
@@ -43,6 +45,7 @@ class EditDialog
             }
             $exit = false;
 
+            // TODO move long cases to separate methods
             switch ($action) {
                 case '?':
                     $this->displayHelp($isExistingRecord);
@@ -84,6 +87,7 @@ class EditDialog
                 case 'wq':
                     // Save the record and exit if successful.
                     if ($this->saveRecord($newRecord)) {
+                        $this->output->success("Record was saved");
                         $exit = true;
                     }
                     break;
@@ -111,19 +115,28 @@ class EditDialog
                         $clearField = false;
                     }
                     $fields = $this->table->getFields2();
+                    // Check if the field number is valid.
                     if (!ctype_digit($fieldNumber) || $fieldNumber < 0 || $fieldNumber > sizeof($fields)) {
                         $this->output->error('Invalid field');
                         break;
                     }
                     $fieldNumber = (int) $fieldNumber;
                     if ($clearField) {
+                        // Clear a field if it allows an empty value.
                         if ($fieldNumber === 0) {
-                            $this->output->error('The key is not deletable');
+                            $this->output->error('The key must not be empty');
                         } else {
                             $field = $fields[$fieldNumber - 1];
-                            // TODO check if the field accepts an empty value, then show an error or clear this field
+                            // TODO handle ReferenceFields, especially with multiple=true. Currently validators for
+                            //      ReferenceFields arent implemented, e.g. it's not possible to have mandatory reference fields
+                            if (!$field->validate('')) {
+                                $this->output->error(sprintf('Field "%s" must not be empty', $field->label));
+                                break;
+                            }
+                            $newRecord[$field->name] = null;
                         }
                     } else {
+                        // Edit a field.
                         if ($fieldNumber === 0) {
                             // TODO edit key
                         } else {
@@ -184,7 +197,7 @@ class EditDialog
             $this->output->success('Record was saved');
             $success = true;
         } catch (\Exception $e) {
-            $this->output->error('Record could not be saved');
+            $this->output->error(sprintf('Record could not be saved: %s', $e->getMessage()));
             $success = false;
         }
         return $success ? $record : null;
