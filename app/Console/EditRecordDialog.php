@@ -91,18 +91,8 @@ class EditRecordDialog
                 case 'd!':
                     if (!$isExistingRecord) {
                         $this->output->error('Invalid command');
-                        breaK;
-                    }
-                    // Delete the record after confirmation.
-                    // TODO don't ever delete without checking for referring records!
-                    break;
-                    if ($this->output->confirm('Delete record?', false)) {
-                        if ($this->table->store->deleteById($record['id'])) {
-                            $this->output->success('Record was deleted');
-                            $exit = true;
-                        } else {
-                            $this->output->error('Record could not be deleted');
-                        }
+                    } elseif ($this->deleteRecord($record)) {
+                        $exit = true;
                     }
                     break;
                 case 'r!':
@@ -182,6 +172,19 @@ class EditRecordDialog
             $success = false;
         }
         return $success ? $record : null;
+    }
+
+    /**
+     * Delete the record.
+     *
+     * @param array<string,mixed> $record
+     * @return bool Whether the record was deleted
+     */
+    protected function deleteRecord(array $record): bool
+    {
+        $deletionDialog = new DeleteRecordsDialog($this->input, $this->output, $this->db, $this->table);
+        $deletedRecords = $deletionDialog->render($record['key']);
+        return !empty($deletedRecords);
     }
 
     /**

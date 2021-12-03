@@ -18,11 +18,12 @@ class DeleteRecordsDialog
     /**
      * Render a records deletion dialog.
      *
-     * @param array<string|int> $keysOrIds Record keys or IDS
-     * @return void
+     * @param string|int $keysOrIds Record keys or IDS
+     * @return array<int,string> IDs and keys of deleted records
      */
-    public function render(array $keysOrIds): void
+    public function render(string|int ...$keysOrIds): array
     {
+        // TODO refactor: no multiple returns anymore
         // TODO if there are referring records, display them and ask the user if:
         //      - the whole records should be deleted
         //      - the references in these records should be removed
@@ -31,7 +32,7 @@ class DeleteRecordsDialog
         list($keys, $invalidKeys) = $this->getKeys($keysOrIds);
         if (!empty($invalidKeys)) {
             $this->output->error(sprintf('Invalid keys: %s', implode(', ', $invalidKeys)));
-            return;
+            return [];
         }
 
         $referringRecords = $this->getReferringRecords($keys);
@@ -41,7 +42,7 @@ class DeleteRecordsDialog
             $this->output->text([
                 'There are no referring records.',
                 '',
-                'Following records will be deleted:'
+                'Following record(s) will be deleted:'
             ]);
             // TODO render a prettier list with more than just the record keys
             $this->output->listing($keys);
@@ -50,9 +51,11 @@ class DeleteRecordsDialog
                 foreach (array_keys($keys) as $id) {
                     $this->table->store->deleteById($id);
                 }
-                $this->output->success('Records deleted');
+                $this->output->success('Record(s) deleted');
+                return $keys;
+            } else {
+                return [];
             }
-            return;
         }
 
         foreach ($keys as $id => $key) {
@@ -68,6 +71,7 @@ class DeleteRecordsDialog
             }
             $this->output->error('No records where deleted due to referring records');
         }
+        return [];
     }
 
     /**

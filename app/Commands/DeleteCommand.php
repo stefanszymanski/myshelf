@@ -32,7 +32,7 @@ class DeleteCommand extends Command
         $tableName = $this->argument('table');
         $table = $this->db->getTable($tableName);
 
-        (new DeleteRecordsDialog($this->input, $this->output, $this->db, $table))->render($this->argument('key'));
+        (new DeleteRecordsDialog($this->input, $this->output, $this->db, $table))->render(...$this->argument('key'));
 
         //      Respect the arguments --delete-records and --derefer-records
     }
