@@ -47,8 +47,11 @@ class RecordSelector
                 $defaults = $this->table->getDefaultsFromAutocompleteInput($value);
                 $dialog = new CreateDialog($this->input, $this->output, $this->db, $this->table);
                 $record = $dialog->render($defaults);
-                $this->table->store->insert($record);
-                $result = $record['key'];
+                $this->output->writeln(' <info>You entered the following data:</info>');
+                // Let the user edit the newly created record.
+                $editDialog = new EditRecordDialog($this->input, $this->output, $this->db, $this->table);
+                $record = $editDialog->render($record);
+                $result = $record['key'] ?? null;
             }
         }
         return $result;

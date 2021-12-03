@@ -22,9 +22,9 @@ class EditRecordDialog
      * Supports persisted (i.e. records with ID) and new records.
      *
      * @param array<string,mixed> $record
-     * @return void
+     * @return array<string,mixed>|null The edited record or null if the record wasn't changed
      */
-    public function render(array $record): void
+    public function render(array $record): ?array
     {
         $recordView = new RecordView($this->input, $this->output, $this->table);
         $recordView->renderEditTable($record);
@@ -74,6 +74,10 @@ class EditRecordDialog
                                 }
                                 break;
                             case 'n':
+                                if (!$isExistingRecord) {
+                                    $this->output->warning('The new record was discarded');
+                                    $newRecord = null;
+                                }
                                 $exit = true;
                                 break;
                             default:
@@ -93,6 +97,7 @@ class EditRecordDialog
                         $this->output->error('Invalid command');
                     } elseif ($this->deleteRecord($record)) {
                         $exit = true;
+                        $newRecord = null;
                     }
                     break;
                 case 'r!':
@@ -101,6 +106,10 @@ class EditRecordDialog
                     break;
                 case 'q!':
                     // Dismiss all changes, just exit.
+                    if (!$isExistingRecord) {
+                        $this->output->warning('The new record was discarded');
+                        $newRecord = null;
+                    }
                     $exit = true;
                     break;
                 default:
@@ -126,6 +135,7 @@ class EditRecordDialog
                     }
             }
         } while (!$exit);
+        return $newRecord;
     }
 
     /**

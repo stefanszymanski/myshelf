@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
-use App\Console\Dialog\CreateDialog;
 use App\Console\EditReferencesDialog;
 use App\Console\RecordSelector;
 use Symfony\Component\Console\Input\InputInterface;
