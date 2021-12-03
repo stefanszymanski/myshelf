@@ -3,7 +3,7 @@
 namespace App\Commands;
 
 use App\Console\Dialog\CreateDialog;
-use App\Console\EditDialog;
+use App\Console\EditRecordDialog;
 use App\Persistence\Database;
 use LaravelZero\Framework\Commands\Command;
 
@@ -27,7 +27,7 @@ class AddCommand extends Command
 
         // TODO should I move the following lines to the CreateDialog?
         $this->output->writeln(' <info>You entered the following data:</info>');
-        $editDialog = new EditDialog($this->input, $this->output, $this->db, $table);
+        $editDialog = new EditRecordDialog($this->input, $this->output, $this->db, $table);
         $editDialog->render($record);
     }
 }

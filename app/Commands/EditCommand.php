@@ -2,7 +2,7 @@
 
 namespace App\Commands;
 
-use App\Console\EditDialog;
+use App\Console\EditRecordDialog;
 use App\Persistence\Database;
 use LaravelZero\Framework\Commands\Command;
 
@@ -29,7 +29,7 @@ class EditCommand extends Command
             return;
         }
 
-        $editDialog = new EditDialog($this->input, $this->output, $this->db, $table);
+        $editDialog = new EditRecordDialog($this->input, $this->output, $this->db, $table);
         $editDialog->render($record);
     }
 }
