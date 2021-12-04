@@ -23,6 +23,16 @@ class Field
     }
 
     /**
+     * Get value for an empty field state.
+     *
+     * @return null
+     */
+    public function getEmptyValue(): mixed
+    {
+        return null;
+    }
+
+    /**
      * Ask the user for a value.
      *
      * @param Context $context

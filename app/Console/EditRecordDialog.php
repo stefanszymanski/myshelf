@@ -261,16 +261,10 @@ class EditRecordDialog extends Dialog
         } else {
             $fields = $this->table->getFields2();
             $field = $fields[$fieldNumber - 1];
-            // TODO handle ReferenceFields, especially with multiple=true. Currently validators for
-            //      ReferenceFields arent implemented, e.g. it's not possible to have mandatory reference fields
-            if ($field instanceof ReferenceField) {
-                $this->note('Clearing reference fields is not implemented, yet');
-                return $record;
-            }
-            if (!$field->validate('')) {
+            if (!$field->validate($field->getEmptyValue())) {
                 $this->error(sprintf('Field "%s" must not be empty', $field->label));
             } else {
-                $record[$field->name] = null;
+                $record[$field->name] = $field->getEmptyValue();
             }
         }
         return $record;

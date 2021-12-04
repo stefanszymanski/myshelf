@@ -20,15 +20,28 @@ class ReferenceField extends Field
         public readonly bool $multiple,
         public readonly string $label,
         public readonly ?string $description = null,
+        protected array $validators = [],
         protected ?\Closure $formatter = null,
     ) {
+    }
+
+    /**
+     * Get value for an empty field state.
+     *
+     * @return array<string>|null
+     */
+    public function getEmptyValue(): mixed
+    {
+        return $this->multiple
+            ? []
+            : null;
     }
 
     public function ask(Context $context, mixed $defaultAnswer = null): mixed
     {
         return $this->multiple
-            ? $this->askForRecords($context, $defaultAnswer)
-            : $this->askForRecord($context, $defaultAnswer);
+            ? $this->askForRecords($context, $defaultAnswer ?? [])
+            : $this->askForRecord($context, $defaultAnswer ?? null);
     }
 
     /**
