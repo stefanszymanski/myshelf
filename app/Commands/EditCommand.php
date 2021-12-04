@@ -33,5 +33,6 @@ class EditCommand extends Command
         $context = new Context($this->input, $this->output, $this->db);
         $editDialog = new EditRecordDialog($context, $table);
         $editDialog->render($record);
+        $context->flush();
     }
 }

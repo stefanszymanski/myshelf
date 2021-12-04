@@ -34,9 +34,8 @@ class DeleteCommand extends Command
         $table = $this->db->getTable($tableName);
 
         $context = new Context($this->input, $this->output, $this->db);
-        $layer = $context->addLayer(sprintf('Delete %s record(s)', $table->getLabel()));
         (new DeleteRecordsDialog($context, $table))->render(...$this->argument('key'));
-        $layer->update();
+        $context->flush();
 
         //      Respect the arguments --delete-records and --derefer-records
     }

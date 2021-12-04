@@ -77,6 +77,13 @@ class Context
         }
     }
 
+    public function flush(): void
+    {
+        $this->layers = [];
+        $this->runQueue();
+        $this->clearQueue();
+    }
+
     /**
      * Clear the queue.
      *

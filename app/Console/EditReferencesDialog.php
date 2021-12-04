@@ -30,9 +30,7 @@ class EditReferencesDialog extends Dialog
 
             // Update the layer and ask for an action.
             $layer->update();
-            $action = empty($elements)
-                ? 'n'
-                : $this->output->ask("Enter action [#,d#,r#,a,d!,r!,w,q,q!,?]");
+            $action = $this->output->ask("Enter action [#,d#,r#,a,d!,r!,w,q,q!,?]");
 
             switch ($action) {
                 case '?':

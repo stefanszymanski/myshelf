@@ -81,7 +81,6 @@ class EditRecordDialog extends Dialog
                 case 'wq':
                     // Save the record and exit if successful.
                     if ($this->persistRecord($newRecord)) {
-                        $this->success("Record was saved");
                         $exit = true;
                     }
                     break;

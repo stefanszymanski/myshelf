@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Dialog;
+namespace App\Console;
 
-use App\Console\Dialog;
 use App\Validator\NewKeyValidator;
 
-// TODO move to App\Console\CreateRecordDialog
-class CreateDialog extends Dialog
+class CreateRecordDialog extends Dialog
 {
     /**
      * @param array<string,mixed> $defaults
      * @return array<string,mixed>
      */
-    public function render(array $defaults = []): array
+    public function render(array $defaults = []): ?array
     {
         $layer = $this->context->addLayer(sprintf('Create new %s', $this->table->getLabel()));
         $layer->update();
@@ -36,6 +34,10 @@ class CreateDialog extends Dialog
             $this->table->createKeyForRecord($record),
             new NewKeyValidator($this->table->store)
         );
+
+        // Let the user edit the newly created record.
+        $editDialog = new EditRecordDialog($this->context, $this->table);
+        $record = $editDialog->render($record);
 
         $layer->finish();
         return $record;
