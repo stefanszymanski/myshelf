@@ -4,18 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\Database;
 use App\Persistence\ReferenceField;
-use App\Persistence\Table;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
-class EditRecordDialog
+class EditRecordDialog extends Dialog
 {
-    public function __construct(protected InputInterface $input, protected SymfonyStyle $output, protected Database $db, protected Table $table)
-    {
-    }
-
     /**
      * Render a record edit dialog.
      *
@@ -26,33 +18,34 @@ class EditRecordDialog
      */
     public function render(array $record): ?array
     {
-        $recordView = new RecordView($this->input, $this->output, $this->table);
-        $recordView->renderEditTable($record);
-
         $newRecord = $record;
 
+        // Add a layer that prints the record table on each update.
+        $layer = $this->context->addLayer(
+            sprintf('Edit %s "%s"', $this->table->getLabel(), $record['key']),
+            function () use (&$record, &$newRecord) {
+                $this->displayRecord($record, $newRecord);
+            },
+        );
+
         do {
+            $exit = false;
             // Check if the record is new or a persisted one, because there are small differences in behaviour:
             // - new records can't get deleted
             // - new records do not have an original state and therefore can't change
             $isExistingRecord = isset($record['id']);
+
+            // Update the layer and ask for an action.
+            $layer->update();
             $supportedActions = $isExistingRecord
-                ? '[#,d#,r#,d!,r!,s,w,q,q!,wq,?]'
-                : '[#,d#,r#,r!,s,w,q,q!,wq,?]';
+                ? '[#,d#,r#,d!,r!,w,q,q!,wq,?]'
+                : '[#,d#,r#,r!,w,q,q!,wq,?]';
             $action = $this->output->ask("Enter action $supportedActions");
 
-            $exit = false;
             switch ($action) {
                 case '?':
                     // Display help.
                     $this->displayHelp($isExistingRecord);
-                    break;
-                case 's':
-                    // Display the record.
-                    $recordView->renderEditTable(
-                        $isExistingRecord ? $record : $newRecord,
-                        $isExistingRecord ? $newRecord : null
-                    );
                     break;
                 case 'w':
                     // Save the record.
@@ -75,7 +68,7 @@ class EditRecordDialog
                                 break;
                             case 'n':
                                 if (!$isExistingRecord) {
-                                    $this->output->warning('The new record was discarded');
+                                    $this->warning('The new record was discarded');
                                     $newRecord = null;
                                 }
                                 $exit = true;
@@ -88,13 +81,13 @@ class EditRecordDialog
                 case 'wq':
                     // Save the record and exit if successful.
                     if ($this->persistRecord($newRecord)) {
-                        $this->output->success("Record was saved");
+                        $this->success("Record was saved");
                         $exit = true;
                     }
                     break;
                 case 'd!':
                     if (!$isExistingRecord) {
-                        $this->output->error('Invalid command');
+                        $this->error('Invalid command');
                     } elseif ($this->deleteRecord($record)) {
                         $exit = true;
                         $newRecord = null;
@@ -107,7 +100,7 @@ class EditRecordDialog
                 case 'q!':
                     // Dismiss all changes, just exit.
                     if (!$isExistingRecord) {
-                        $this->output->warning('The new record was discarded');
+                        $this->warning('The new record was discarded');
                         $newRecord = null;
                     }
                     $exit = true;
@@ -116,7 +109,7 @@ class EditRecordDialog
                     // Edit, clear or restore a field.
                     list($action, $fieldNumber) = $this->parseFieldAction($action);
                     if (!$action) {
-                        $this->output->error('Invalid action or field');
+                        $this->error('Invalid action or field');
                         break;
                     }
                     switch ($action) {
@@ -130,11 +123,13 @@ class EditRecordDialog
                             $newRecord = $this->restoreField($newRecord, $record, $fieldNumber);
                             break;
                         default:
-                            $this->output->error('Invalid action');
+                            $this->error('Invalid action');
                             break;
                     }
             }
         } while (!$exit);
+
+        $layer->finish();
         return $newRecord;
     }
 
@@ -152,7 +147,6 @@ class EditRecordDialog
             'r# - restore field # to its original value',
             'd! - delete the record',
             'r! - restore the record to its original state',
-            ' s - show record',
             ' w - save changes',
             ' q - quit (asks for confirmation if there are unsaved changes)',
             'q! - quit without saving',
@@ -162,7 +156,17 @@ class EditRecordDialog
         if (!$isExistingRecord) {
             unset($lines[3]);
         }
-        $this->output->text($lines);
+        $this->context->enqueue(fn () => $this->output->text($lines));
+    }
+
+    protected function displayRecord(array $record, array $newRecord): void
+    {
+        $isExistingRecord = isset($record['id']);
+        $recordView = new RecordView($this->input, $this->output, $this->table);
+        $recordView->renderEditTable(
+            $isExistingRecord ? $record : $newRecord,
+            $isExistingRecord ? $newRecord : null
+        );
     }
 
     /**
@@ -175,10 +179,10 @@ class EditRecordDialog
     {
         try {
             $record = $this->table->store->updateOrInsert($record);
-            $this->output->success('Record was saved');
+            $this->success('Record was saved');
             $success = true;
         } catch (\Exception $e) {
-            $this->output->error(sprintf('Record could not be saved: %s', $e->getMessage()));
+            $this->error(sprintf('Record could not be saved: %s', $e->getMessage()));
             $success = false;
         }
         return $success ? $record : null;
@@ -192,7 +196,7 @@ class EditRecordDialog
      */
     protected function deleteRecord(array $record): bool
     {
-        $deletionDialog = new DeleteRecordsDialog($this->input, $this->output, $this->db, $this->table);
+        $deletionDialog = new DeleteRecordsDialog($this->context, $this->table);
         $deletedRecords = $deletionDialog->render($record['key']);
         return !empty($deletedRecords);
     }
@@ -238,7 +242,7 @@ class EditRecordDialog
         } else {
             $fields = $this->table->getFields2();
             $field = $fields[$fieldNumber - 1];
-            $record[$field->name] = $field->ask($this->input, $this->output, $this->db, $record[$field->name] ?? null);
+            $record[$field->name] = $field->ask($this->context, $record[$field->name] ?? null);
         }
         return $record;
     }
@@ -253,18 +257,18 @@ class EditRecordDialog
     protected function clearField(array $record, int $fieldNumber): array
     {
         if ($fieldNumber === 0) {
-            $this->output->error('The key must not be empty');
+            $this->error('The key must not be empty');
         } else {
             $fields = $this->table->getFields2();
             $field = $fields[$fieldNumber - 1];
             // TODO handle ReferenceFields, especially with multiple=true. Currently validators for
             //      ReferenceFields arent implemented, e.g. it's not possible to have mandatory reference fields
             if ($field instanceof ReferenceField) {
-                $this->output->note('Clearing reference fields is not implemented, yet');
+                $this->note('Clearing reference fields is not implemented, yet');
                 return $record;
             }
             if (!$field->validate('')) {
-                $this->output->error(sprintf('Field "%s" must not be empty', $field->label));
+                $this->error(sprintf('Field "%s" must not be empty', $field->label));
             } else {
                 $record[$field->name] = null;
             }

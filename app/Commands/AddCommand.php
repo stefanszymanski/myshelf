@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Console\Dialog\CreateDialog;
+use App\Context;
 use App\Persistence\Database;
 use LaravelZero\Framework\Commands\Command;
 
@@ -21,7 +22,8 @@ class AddCommand extends Command
     {
         $table = $this->db->getTable($this->argument('table'));
 
-        $createDialog = new CreateDialog($this->input, $this->output, $this->db, $table);
+        $context = new Context($this->input, $this->output, $this->db);
+        $createDialog = new CreateDialog($context, $table);
         $createDialog->render();
     }
 }

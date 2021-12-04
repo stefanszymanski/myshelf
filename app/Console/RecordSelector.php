@@ -5,18 +5,10 @@ declare(strict_types=1);
 namespace App\Console;
 
 use App\Console\Dialog\CreateDialog;
-use App\Persistence\Database;
-use App\Persistence\Table;
-use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
-class RecordSelector
+class RecordSelector extends Dialog
 {
-    public function __construct(protected InputInterface $input, protected SymfonyStyle $output, protected Database $db, protected Table $table)
-    {
-    }
-
     /**
      * Ask for a record with autocompletion.
      *
@@ -45,11 +37,11 @@ class RecordSelector
             } else {
                 // Create a new record.
                 $defaults = $this->table->getDefaultsFromAutocompleteInput($value);
-                $dialog = new CreateDialog($this->input, $this->output, $this->db, $this->table);
+                $dialog = new CreateDialog($this->context, $this->table);
                 $record = $dialog->render($defaults);
                 $this->output->writeln(' <info>You entered the following data:</info>');
                 // Let the user edit the newly created record.
-                $editDialog = new EditRecordDialog($this->input, $this->output, $this->db, $this->table);
+                $editDialog = new EditRecordDialog($this->context, $this->table);
                 $record = $editDialog->render($record);
                 $result = $record['key'] ?? null;
             }

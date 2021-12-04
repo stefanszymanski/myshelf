@@ -4,19 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\Database;
-use App\Persistence\Table;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-
-// TODO add a breadcrumb-like overview, e.g. "Edit book 4" > "Edit author references" > "Add person reference" > "Create new person"
-//      I think that's necessary, because the different edit/create dialogs can be nested deeply
-class EditReferencesDialog
+class EditReferencesDialog extends Dialog
 {
-    public function __construct(protected InputInterface $input, protected SymfonyStyle $output, protected Database $db, protected Table $table)
-    {
-    }
-
     /**
      * Render a references edit dialog.
      *
@@ -25,21 +14,31 @@ class EditReferencesDialog
      */
     public function render(array $keys): array
     {
-        // TODO action for moving a line up/down?
         $elements = array_map(fn ($answer) => [$answer, $answer], $keys);
+
+        // Add a layer that prints the references list on each update.
+        $layer = $this->context->addLayer(
+            sprintf('Edit %s references', $this->table->getLabel()),
+            function() use (&$elements) {
+                $this->displayList($elements);
+            },
+        );
+
+        // TODO action for moving a line up/down?
         do {
             $exit = false;
+
+            // Update the layer and ask for an action.
+            $layer->update();
             $action = empty($elements)
                 ? 'n'
-                : $this->output->ask("Enter action [#,d#,r#,a,d!,r!,s,w,q,q!,?]");
+                : $this->output->ask("Enter action [#,d#,r#,a,d!,r!,w,q,q!,?]");
+
             switch ($action) {
                 case '?':
                     // Display help.
+                    /* $layer->skipNextUpdate(); */
                     $this->displayHelp();
-                    break;
-                case 's':
-                    // Display elements.
-                    $this->displayList($elements);
                     break;
                 case 'w':
                 case 'wq':
@@ -88,7 +87,7 @@ class EditReferencesDialog
                     // Edit, remove or restore an element
                     list($action, $elementNumber) = $this->parseElementAction($action, $elements);
                     if (!$action) {
-                        $this->output->error('Invalid action or element');
+                        $this->error('Invalid action or element');
                         break;
                     }
                     switch ($action) {
@@ -102,11 +101,12 @@ class EditReferencesDialog
                             $elements = $this->restoreElement($elements, $elementNumber);
                             break;
                         default:
-                            $this->output->error('Invalid action');
+                            $this->error('Invalid action');
                             break;
                     }
             }
         } while (!$exit);
+        $layer->finish();
         return array_filter(array_column($elements, 1));
     }
 
@@ -124,13 +124,12 @@ class EditReferencesDialog
             ' a - add a reference, also [c,n]',
             'd! - delete all references',
             'r! - restore all references to their original state',
-            ' s - show references',
             ' w - save changes and quit, also [wq]',
             ' q - quit (asks for confirmation if there are changes)',
             'q! - quit without saving',
             ' ? - print help',
         ];
-        $this->output->text($lines);
+        $this->context->enqueue(fn () => $this->output->text($lines));
     }
 
     /**
@@ -170,7 +169,7 @@ class EditReferencesDialog
      */
     protected function askForRecord(?string $key = null): ?string
     {
-        return (new RecordSelector($this->input, $this->output, $this->db, $this->table))->render($key);
+        return (new RecordSelector($this->context, $this->table))->render($key);
     }
 
     /**
@@ -214,13 +213,13 @@ class EditReferencesDialog
             if (!in_array($newValue, array_column($list, 1))) {
                 if (in_array($newValue, array_column($list, 0))) {
                     $n = array_search($newValue, array_column($list, 0));
-                    $this->output->warning("Record $newValue was already selected, but marked for deletion");
+                    $this->warning("Record $newValue was already selected, but marked for deletion");
                     $list[$n] = [$newValue, $newValue];
                 } else {
                     $list[] = [null, $newValue];
                 }
             } else {
-                $this->output->warning("Record $newValue is already selected");
+                $this->warning("Record $newValue is already selected");
             }
         }
         return $list;
@@ -264,7 +263,7 @@ class EditReferencesDialog
     {
         $newValue = $this->askForRecord($list[$elementNumber][1]);
         if (!$newValue) {
-            $this->output->warning('Nothing was selected, selection was dismissed');
+            $this->warning('Nothing was selected, selection was dismissed');
         } else {
             $list[$elementNumber][1] = $newValue;
         }

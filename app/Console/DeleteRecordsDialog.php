@@ -4,17 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\Database;
-use App\Persistence\Table;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-
-class DeleteRecordsDialog
+class DeleteRecordsDialog extends Dialog
 {
-    public function __construct(protected InputInterface $input, protected SymfonyStyle $output, protected Database $db, protected Table $table)
-    {
-    }
-
     /**
      * Render a records deletion dialog.
      *
@@ -31,7 +22,7 @@ class DeleteRecordsDialog
 
         list($keys, $invalidKeys) = $this->getKeys($keysOrIds);
         if (!empty($invalidKeys)) {
-            $this->output->error(sprintf('Invalid keys: %s', implode(', ', $invalidKeys)));
+            $this->error(sprintf('Invalid keys: %s', implode(', ', $invalidKeys)));
             return [];
         }
 
@@ -51,7 +42,7 @@ class DeleteRecordsDialog
                 foreach (array_keys($keys) as $id) {
                     $this->table->store->deleteById($id);
                 }
-                $this->output->success('Record(s) deleted');
+                $this->success('Record(s) deleted');
                 return $keys;
             } else {
                 return [];
@@ -65,11 +56,11 @@ class DeleteRecordsDialog
                 continue;
             }
             foreach ($_referringRecords as $fieldName => $__referringRecords) {
-                $this->output->warning("There are referring records for '$key [$id]' on field '$fieldName'");
+                $this->warning("There are referring records for '$key [$id]' on field '$fieldName'");
                 // TODO render prettier table
-                $this->output->table(['ID', 'Key'], $__referringRecords);
+                $this->context->enqueue(fn () => $this->output->table(['ID', 'Key'], $__referringRecords));
             }
-            $this->output->error('No records where deleted due to referring records');
+            $this->error('No records were deleted due to referring records');
         }
         return [];
     }

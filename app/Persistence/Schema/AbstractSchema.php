@@ -105,7 +105,7 @@ abstract class AbstractSchema implements Schema
     {
         // If no name is set, determine it from the class name.
         if (!$this->label) {
-            $parts = array_reverse(explode('\\', static::class));
+            $parts = explode('\\', static::class);
             $this->label = array_pop($parts);
         }
         return $this->label;

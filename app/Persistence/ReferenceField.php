@@ -6,16 +6,13 @@ namespace App\Persistence;
 
 use App\Console\EditReferencesDialog;
 use App\Console\RecordSelector;
+use App\Context;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 class ReferenceField extends Field
 {
-    protected InputInterface $input;
-    protected SymfonyStyle $output;
-    protected Database $db;
-
     public function __construct(
         public readonly string $table,
         public readonly string $name,
@@ -27,14 +24,11 @@ class ReferenceField extends Field
     ) {
     }
 
-    public function ask(InputInterface $input, SymfonyStyle $output, Database $db, mixed $defaultAnswer = null): mixed
+    public function ask(Context $context, mixed $defaultAnswer = null): mixed
     {
-        $this->input = $input;
-        $this->output = $output;
-        $this->db = $db;
         return $this->multiple
-            ? $this->askForRecords($defaultAnswer)
-            : $this->askForRecord($defaultAnswer);
+            ? $this->askForRecords($context, $defaultAnswer)
+            : $this->askForRecord($context, $defaultAnswer);
     }
 
     /**
@@ -42,9 +36,9 @@ class ReferenceField extends Field
      *
      * @return string|null Key of the selected record
      */
-    protected function askForRecord(?string $defaultAnswer): ?string
+    protected function askForRecord(Context $context, ?string $defaultAnswer): ?string
     {
-        return (new RecordSelector($this->input, $this->output, $this->db, $this->db->getTable($this->foreignTable)))->render($defaultAnswer);
+        return (new RecordSelector($context, $context->db->getTable($this->foreignTable)))->render($defaultAnswer);
     }
 
     /**
@@ -55,8 +49,8 @@ class ReferenceField extends Field
      * @param array<string> $defaultAnswer List of record keys
      * @return array<string> List of record keys
      */
-    protected function askForRecords(array $defaultAnswer = []): array
+    protected function askForRecords(Context $context, array $defaultAnswer = []): array
     {
-        return (new EditReferencesDialog($this->input, $this->output, $this->db, $this->db->getTable($this->foreignTable)))->render($defaultAnswer);
+        return (new EditReferencesDialog($context, $context->db->getTable($this->foreignTable)))->render($defaultAnswer);
     }
 }

@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
+use App\Context;
 use App\Utility\RecordUtility;
 use App\Validator\ValidationException;
-use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 class Field
 {
@@ -26,17 +25,15 @@ class Field
     /**
      * Ask the user for a value.
      *
-     * @param InputInterface $input
-     * @param SymfonyStyle $output
-     * @param Database $db
+     * @param Context $context
      * @param mixed $defaultAnswer
      * @return mixed
      */
-    public function ask(InputInterface $input, SymfonyStyle $output, Database $db, mixed $defaultAnswer = null): mixed
+    public function ask(Context $context, mixed $defaultAnswer = null): mixed
     {
         if (!$this->question) {
             $question = $this->createDefaultQuestion($defaultAnswer);
-            return $output->askQuestion($question);
+            return $context->output->askQuestion($question);
         }
         return $defaultAnswer;
     }

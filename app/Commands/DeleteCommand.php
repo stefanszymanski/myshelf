@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Console\DeleteRecordsDialog;
+use App\Context;
 use App\Persistence\Database;
 use LaravelZero\Framework\Commands\Command;
 
@@ -32,7 +33,10 @@ class DeleteCommand extends Command
         $tableName = $this->argument('table');
         $table = $this->db->getTable($tableName);
 
-        (new DeleteRecordsDialog($this->input, $this->output, $this->db, $table))->render(...$this->argument('key'));
+        $context = new Context($this->input, $this->output, $this->db);
+        $layer = $context->addLayer(sprintf('Delete %s record(s)', $table->getLabel()));
+        (new DeleteRecordsDialog($context, $table))->render(...$this->argument('key'));
+        $layer->update();
 
         //      Respect the arguments --delete-records and --derefer-records
     }
