@@ -20,6 +20,7 @@ class ShowCommand extends Command
     }
 
     // TODO per default show resolved references, e.g. author name
+    // TODO mark reference with a fancy icon?
     // TODO implement --raw
     public function handle(): void
     {

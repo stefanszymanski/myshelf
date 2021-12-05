@@ -57,9 +57,6 @@ class Field
      */
     public function validate(mixed $value): bool
     {
-        // TODO doesnt work with ReferenceField because it doesnt have a property $validators
-        //      How to solve this problem? Clearing multi-reference fields shouldnt clear all references, but let the user select
-        //      which references to remove.
         try {
             foreach ($this->validators as $validatorFactory) {
                 call_user_func($validatorFactory)($value);
