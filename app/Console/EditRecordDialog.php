@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console;
 
 use App\Persistence\ReferenceField;
+use App\Validator\ValidationException;
 
 class EditRecordDialog extends Dialog
 {
@@ -280,8 +281,13 @@ class EditRecordDialog extends Dialog
     protected function restoreField(array $record, array $originalRecord, int $fieldNumber): array
     {
         if ($fieldNumber === 0) {
-            // TODO check if the key is still available, i.e. wasn't used for another record in the meanwhile
-            $record['key'] = $originalRecord['key'];
+            $field = $this->table->getKeyField($record['id'] ?? null);
+            try {
+                $field->validate($originalRecord['key']);
+                $record['key'] = $originalRecord['key'];
+            } catch (ValidationException $e) {
+                $this->error('The key of the original record is used by another record');
+            }
         } else {
             $fields = $this->table->getFields();
             $field = $fields[$fieldNumber - 1];
