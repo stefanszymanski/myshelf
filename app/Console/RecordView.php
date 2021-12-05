@@ -78,25 +78,21 @@ class RecordView
                 $value,
             ];
             // Add a fourth column for the changed value.
-            // Highlight its content if the changed value is different to the original value.
             if ($newRecord) {
                 $newValue = $field->valueToString($newRecord[$field->name] ?? null);
-                // TODO highlight changed elements in multivalue fields, e.g. in multireference fields
-                $format = match (true) {
-                    $value === $newValue => '%s',
-                    empty($value) && !empty($newValue) => '<fg=green>%s</>',
-                    !empty($value) && empty($newValue) => '<fg=red>empty</>', // TODO find a better way to highlight cleared fields
-                    $value !== $newValue => '<fg=yellow>%s</>',
-                    default => throw new \UnexpectedValueException('This should not happen'),
-                };
-                $row[] = sprintf($format, $newValue);
+                $row[] = $this->formatNewValue($value, $newValue);
             }
             $dataRows[] = $row;
         }
 
         // Build rows for ID and Key.
         // If the record doesn't have an ID-field, it's not persisted and that row is omitted.
-        $idRows = [['0', 'Key', $record['key'] ?? null, $newRecord['key'] ?? null]];
+        $idRows = [[
+            '0',
+            'Key',
+            $record['key'] ?? null,
+            $this->formatNewValue($record['key'], $newRecord['key'] ?? null)
+        ]];
         if (isset($record['id'])) {
             array_unshift($idRows, ['', 'ID', $record['id'] ?? null]);
         }
@@ -115,6 +111,26 @@ class RecordView
         }
 
         $this->_renderTable($headers, $rows, 1);
+    }
+
+    /**
+     * Format the new value depending on how it differs from the original value
+     *
+     * @param mixed $value
+     * @param mixed $newValue
+     * @return string
+     */
+    protected function formatNewValue(mixed $value, mixed $newValue): string
+    {
+        // TODO highlight changed elements in multivalue fields, e.g. in multireference fields
+        $format = match (true) {
+            $value === $newValue => '%s',
+            empty($value) && !empty($newValue) => '<fg=green>%s</>',
+            !empty($value) && empty($newValue) => '<fg=red>empty</>', // TODO find a better way to highlight cleared fields
+            $value !== $newValue => '<fg=yellow>%s</>',
+            default => throw new \UnexpectedValueException('This should not happen'),
+        };
+        return sprintf($format, $newValue);
     }
 
     /**
