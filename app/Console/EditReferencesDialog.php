@@ -4,16 +4,26 @@ declare(strict_types=1);
 
 namespace App\Console;
 
+use App\Persistence\ReferenceField;
+
 class EditReferencesDialog extends Dialog
 {
+    /**
+     * The referring field
+     *
+     * @var ReferenceField
+     */
+    protected ReferenceField $field;
+
     /**
      * Render a references edit dialog.
      *
      * @param array<string> $keys
      * @return array<string>
      */
-    public function render(array $keys): array
+    public function render(ReferenceField $field, array $keys): array
     {
+        $this->field = $field;
         $elements = array_map(fn ($answer) => [$answer, $answer], $keys);
 
         // Add a layer that prints the references list on each update.
@@ -167,7 +177,10 @@ class EditReferencesDialog extends Dialog
      */
     protected function askForRecord(?string $key = null): ?string
     {
-        return (new RecordSelector($this->context, $this->table))->render($key);
+        return (new RecordSelector(
+            $this->context,
+            $this->table)
+        )->render(sprintf('Select a %s', $this->field->label), $key);
     }
 
     /**

@@ -16,14 +16,14 @@ class RecordSelector extends Dialog
      * it is asked if a new record may be created. If the user confirms,
      * a create dialog is started and the key of this newly created record gets returned.
      *
+     * @param string $question
      * @param string|null $defaultAnswer
      * @return string|null Key of the selected record
      */
-    public function render(?string $defaultAnswer = null): ?string
+    public function render(string $question, ?string $defaultAnswer = null): ?string
     {
-        // TODO better question message, because when called from the CreateRecordDialog the user does not know which field he is asked for
         $options = $this->table->getAutocompleteOptions();
-        list($exists, $value) = $this->askWithAutocompletion('Select a record', $options, $defaultAnswer);
+        list($exists, $value) = $this->askWithAutocompletion($question, $options, $defaultAnswer);
         if ($exists) {
             // If the record exists, use it.
             $result = $value;

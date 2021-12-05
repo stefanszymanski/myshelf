@@ -51,7 +51,10 @@ class ReferenceField extends Field
      */
     protected function askForRecord(Context $context, ?string $defaultAnswer): ?string
     {
-        return (new RecordSelector($context, $context->db->getTable($this->foreignTable)))->render($defaultAnswer);
+        return (new RecordSelector(
+            $context,
+            $context->db->getTable($this->foreignTable))
+        )->render(sprintf('Select a %s', $this->label), $defaultAnswer);
     }
 
     /**
@@ -64,6 +67,9 @@ class ReferenceField extends Field
      */
     protected function askForRecords(Context $context, array $defaultAnswer = []): array
     {
-        return (new EditReferencesDialog($context, $context->db->getTable($this->foreignTable)))->render($defaultAnswer);
+        return (new EditReferencesDialog(
+            $context,
+            $context->db->getTable($this->foreignTable))
+        )->render($this, $defaultAnswer);
     }
 }
