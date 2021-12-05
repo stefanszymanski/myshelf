@@ -85,31 +85,31 @@ class Person extends AbstractSchema
 
         // Filters on real fields
         $this
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'firstname',
                 operator: '=',
                 description: 'Exact match on first name',
                 queryModifier: fn ($value) => ['firstname', '=', $value],
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'firstname',
                 operator: '~',
                 description: 'Pattern match on first name',
                 queryModifier: fn ($value) => ['firstname', 'LIKE', $value],
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'lastname',
                 operator: '=',
                 description: 'Exact match on last name',
                 queryModifier: fn ($value) => ['lastname', '=', $value],
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'lastname',
                 operator: '~',
                 description: 'Pattern match on last name',
                 queryModifier: fn ($value) => ['lastname', 'LIKE', $value],
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'nationality',
                 operator: '=',
                 description: 'Exact match on nationality',
@@ -125,7 +125,7 @@ class Person extends AbstractSchema
             ['>=', '>=', 'greater or equal'],
         ];
         foreach ($operators as list($operator, $foreignOperator, $description)) {
-            $this->registerJoinedStoreFilter2(
+            $this->registerJoinedStoreQueryFilter2(
                 field: 'books',
                 operator: $operator,
                 description: "Number of books authored $description",

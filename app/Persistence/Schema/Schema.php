@@ -2,9 +2,9 @@
 
 namespace App\Persistence\Schema;
 
+use App\Persistence\Field;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
-use App\Persistence\Reference;
 use SleekDB\Store;
 
 interface Schema
@@ -15,6 +15,13 @@ interface Schema
      * @return string
      */
     public function getLabel(): string;
+
+    /**
+     * Get fields.
+     *
+     * @return array<Field>
+     */
+    public function getFields(): array;
 
     /**
      * Get all fields.
@@ -28,14 +35,7 @@ interface Schema
      *
      * @return array<string,array<string,QueryFilter>>
      */
-    public function getFilters(): array;
-
-    /**
-     * Get all references.
-     *
-     * @return array<Reference>
-     */
-    public function getReferences(): array;
+    public function getQueryFilters(): array;
 
     /**
      * Get a default list of fields to use in the list view.
@@ -63,7 +63,7 @@ interface Schema
     /**
      * Create a default record key from record fields.
      *
-     * @param array<string,mixed> A record
+     * @param array<string,mixed> $record
      * @return string A record key
      */
     public function createKeyForRecord(array $record): string;

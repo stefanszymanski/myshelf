@@ -36,7 +36,7 @@ class DescribeCommand extends Command
                 'description' => $field->description,
                 'type' => $this->getFieldTypeLabel($field->type),
             ];
-        })->bindTo($this), $table->getFields());
+        })->bindTo($this), $table->getQueryFields());
         $this->output->writeln("\n  Table fields (usable with --fields, --orderby and --groupby)");
         $this->renderTable(['Name', 'Label', 'Description'], $info, 'type');
 
@@ -47,7 +47,7 @@ class DescribeCommand extends Command
                 'operator' => $filter->operator,
                 'description' => $filter->description,
             ];
-        }, $table->getFilters());
+        }, $table->getQueryFilters());
         usort($info, fn (array $a, array $b) => $a['name'] <=> $b['name']);
         $this->renderTable(['Operator', 'Description'], $info, 'name');
     }

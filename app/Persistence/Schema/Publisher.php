@@ -44,13 +44,13 @@ class Publisher extends AbstractSchema
             );
 
         $this
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'name',
                 operator: '=',
                 description: 'Exact match on name',
                 queryModifier: fn ($value) => ['name', '=', $value],
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'name',
                 operator: '~',
                 description: 'Pattern match on name',

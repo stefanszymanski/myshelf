@@ -17,6 +17,9 @@ class Book extends AbstractSchema
      */
     protected array $defaultListFields = ['title', 'authors'];
 
+    /**
+     * {@inheritDoc}
+     */
     public function createKeyForRecord(array $record): string
     {
         return RecordUtility::createKey($record['authors'][0] ?? $record['editors'][0] ?? $record['publisher'], $record['title']);
@@ -65,11 +68,6 @@ class Book extends AbstractSchema
     protected function configure(): void
     {
         $this->configureFields();
-
-        // Registering references is important for detecting referring records when a record is deleted or its key changes
-        $this->registerReference('authors', 'person', true);
-        $this->registerReference('editors', 'person', true);
-        $this->registerReference('publisher', 'publisher', false);
 
         // Real fields
         $this
@@ -139,19 +137,19 @@ class Book extends AbstractSchema
 
         // Filters on real fields
         $this
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'author',
                 operator: '=',
                 description: 'Exact match on a authors key',
                 queryModifier: fn ($value) => ['authors', 'CONTAINS', $value]
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'title',
                 operator: '=',
                 description: 'Exact match on the title',
                 queryModifier: fn ($value) => ['title', '=', $value]
             )
-            ->registerSimpleFilter(
+            ->registerSimpleQueryFilter(
                 field: 'title',
                 operator: '~',
                 description: 'Pattern match on the title',
@@ -167,7 +165,7 @@ class Book extends AbstractSchema
             ['>=', '>=', 'greater or equal'],
         ];
         foreach ($operators as list($operator, $internalOperator, $description)) {
-            $this->registerSimpleFilter(
+            $this->registerSimpleQueryFilter(
                 field: 'published',
                 operator: $operator,
                 description: "Publishing year $description",
@@ -185,7 +183,7 @@ class Book extends AbstractSchema
         ];
         foreach ($persons as list($field, $description, $criteria)) {
             $this
-                ->registerJoinedStoreFilter(
+                ->registerJoinedStoreQueryFilter(
                     field: "$field.lastname",
                     operator: '=',
                     description: "Exact match on $description last name",
@@ -194,7 +192,7 @@ class Book extends AbstractSchema
                     foreignField: 'lastname',
                     foreignOperator: '=',
                 )
-                ->registerJoinedStoreFilter(
+                ->registerJoinedStoreQueryFilter(
                     field: "$field.lastname",
                     operator: '~',
                     description: "Pattern match on $description last name",
@@ -203,7 +201,7 @@ class Book extends AbstractSchema
                     foreignField: 'lastname',
                     foreignOperator: 'LIKE',
                 )
-                ->registerJoinedStoreFilter(
+                ->registerJoinedStoreQueryFilter(
                     field: "$field.name",
                     operator: '~',
                     description: "Pattern match on $description full name",
@@ -218,7 +216,7 @@ class Book extends AbstractSchema
         $publisherStore = fn (Database $db) => $db->publishers()->store;
         $publisherCriteria = fn (array $book) => ['key', '=', $book['publisher']];
         $this
-            ->registerJoinedStoreFilter(
+            ->registerJoinedStoreQueryFilter(
                 field: 'publisher.name',
                 operator: '=',
                 description: 'Exact match on the publishers name',
@@ -227,7 +225,7 @@ class Book extends AbstractSchema
                 foreignField: 'name',
                 foreignOperator: '='
             )
-            ->registerJoinedStoreFilter(
+            ->registerJoinedStoreQueryFilter(
                 field: 'publisher.name',
                 operator: '~',
                 description: 'Pattern match on the publishers name',

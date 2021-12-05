@@ -43,9 +43,10 @@ class Field
     {
         if (!$this->question) {
             $question = $this->createDefaultQuestion($defaultAnswer);
-            return $context->output->askQuestion($question);
+        } else {
+            $question = call_user_func($this->question, $defaultAnswer);
         }
-        return $defaultAnswer;
+        return $context->output->askQuestion($question);
     }
 
     /**

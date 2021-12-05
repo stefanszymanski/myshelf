@@ -214,7 +214,7 @@ class EditRecordDialog extends Dialog
      */
     protected function parseFieldAction(string $action): array
     {
-        $fields = $this->table->getFields2();
+        $fields = $this->table->getFields();
         if (ctype_digit($action)) {
             $fieldNumber = $action;
             $action = 'e';
@@ -239,7 +239,7 @@ class EditRecordDialog extends Dialog
         if ($fieldNumber === 0) {
             $field = $this->table->getKeyField($record['id'] ?? null);
         } else {
-            $fields = $this->table->getFields2();
+            $fields = $this->table->getFields();
             $field = $fields[$fieldNumber - 1];
         }
         $record[$field->name] = $field->ask($this->context, $record[$field->name] ?? null);
@@ -258,7 +258,7 @@ class EditRecordDialog extends Dialog
         if ($fieldNumber === 0) {
             $this->error('The key must not be empty');
         } else {
-            $fields = $this->table->getFields2();
+            $fields = $this->table->getFields();
             $field = $fields[$fieldNumber - 1];
             if (!$field->validate($field->getEmptyValue())) {
                 $this->error(sprintf('Field "%s" must not be empty', $field->label));
@@ -283,7 +283,7 @@ class EditRecordDialog extends Dialog
             // TODO check if the key is still available, i.e. wasn't used for another record in the meanwhile
             $record['key'] = $originalRecord['key'];
         } else {
-            $fields = $this->table->getFields2();
+            $fields = $this->table->getFields();
             $field = $fields[$fieldNumber - 1];
             $record[$field->name] = $originalRecord[$field->name];
         }

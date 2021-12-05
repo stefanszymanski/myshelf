@@ -7,12 +7,12 @@ use App\Persistence\Field;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Query\FieldType as QueryFieldType;
-use App\Persistence\Reference;
 use App\Persistence\ReferenceField;
 use App\Utility\RecordUtility;
 use App\Validator\NotEmptyValidator;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
+use Symfony\Component\Console\Question\Question;
 
 abstract class AbstractSchema implements Schema
 {
@@ -70,13 +70,6 @@ abstract class AbstractSchema implements Schema
      */
     protected array $filters = [];
 
-    /**
-     * Registered references
-     *
-     * @var array<string,Reference>
-     */
-    protected array $references = [];
-
     public function __construct(protected string $tableName)
     {
         // Register fields that all types have.
@@ -101,6 +94,9 @@ abstract class AbstractSchema implements Schema
      */
     abstract protected function configure(): void;
 
+    /**
+     * {@inheritDoc}
+     */
     public function getLabel(): string
     {
         // If no name is set, determine it from the class name.
@@ -130,17 +126,9 @@ abstract class AbstractSchema implements Schema
     /**
      * {@inheritDoc}
      */
-    public function getFilters(): array
+    public function getQueryFilters(): array
     {
         return $this->filters;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getReferences(): array
-    {
-        return $this->references;
     }
 
     /**
@@ -167,23 +155,17 @@ abstract class AbstractSchema implements Schema
     }
 
     /**
-     * Register a reference.
+     * Register a table field.
      *
-     * @param string $field
-     * @param string $table
-     * @param bool $multiple
+     * @param string $name Field name
+     * @param string $label
+     * @param bool $required Whether the field must have a non-empty value
+     * @param callable(string):Question|null $question A callable that takes a default value as argument and returns a Question object
+     * @param array<callable(mixed):mixed>|callable(mixed):mixed $validator One or more callables that take a field value and throw an exception when the validation fails, return the field value
+     * @param callable(mixed):string|null $formatter A callable that takes a field value and returns a string representation
+     * @param string|null $description
+     * @return self
      */
-    protected function registerReference(string $field, string $table, bool $multiple): self
-    {
-        $this->references[$field] = new Reference(
-            table: $this->tableName,
-            foreignTable: $table,
-            foreignField: $field,
-            multiple: $multiple,
-        );
-        return $this;
-    }
-
     protected function registerField(string $name, string $label, bool $required = false, ?callable $question = null, array|callable $validator = [], ?callable $formatter = null, ?string $description = null)
     {
         if (!is_array($validator)) {
@@ -204,6 +186,18 @@ abstract class AbstractSchema implements Schema
         return $this;
     }
 
+    /**
+     * Register a table field that references one or more records of another (or the same) table.
+     *
+     * @param string $name Field name
+     * @param string $foreignTable Name of the referenced table
+     * @param bool $multiple Whether the field holds multiple references
+     * @param string $label
+     * @param bool $required Whether the field must have a non-empty value
+     * @param callable(mixed):string|null $formatter A callable that takes a field value and returns a string representation
+     * @param string|null $description
+     * @return self
+     */
     protected function registerReferenceField(string $name, string $foreignTable, bool $multiple, string $label, bool $required = false, ?callable $formatter = null, ?string $description = null)
     {
         if ($required) {
@@ -221,14 +215,8 @@ abstract class AbstractSchema implements Schema
         return $this;
     }
 
-    public function getFields2(): array
-    {
-        return $this->fields;
-    }
-
-
     /**
-     * Register a new field.
+     * Register a field for querying records.
      *
      * @param string $name Unique identifier of the field
      * @param string $label
@@ -253,7 +241,7 @@ abstract class AbstractSchema implements Schema
     }
 
     /**
-     * Register a filter.
+     * Register a filter for querying.
      *
      * @param string $field
      * @param string $operator
@@ -261,7 +249,7 @@ abstract class AbstractSchema implements Schema
      * @param string|null $description
      * @return self
      */
-    protected function registerFilter(string $field, string $operator, callable $queryModifier, string $description = null): self
+    protected function registerQueryFilter(string $field, string $operator, callable $queryModifier, string $description = null): self
     {
         if (!isset($this->filters[$field])) {
             $this->filters[$field] = [];
@@ -286,9 +274,9 @@ abstract class AbstractSchema implements Schema
      * @param string|null $description
      * @return self
      */
-    protected function registerSimpleFilter(string $field, string $operator, callable $queryModifier, string $description = null): self
+    protected function registerSimpleQueryFilter(string $field, string $operator, callable $queryModifier, string $description = null): self
     {
-        $this->registerFilter(
+        $this->registerQueryFilter(
             field: $field,
             operator: $operator,
             description: $description,
@@ -326,9 +314,9 @@ abstract class AbstractSchema implements Schema
      * @param string|null $description
      * @return self
      */
-    protected function registerJoinedStoreFilter(string $field, string $operator, callable $foreignStore, callable $foreignCriteria, string|callable $foreignField, string $foreignOperator, string $description = null): self
+    protected function registerJoinedStoreQueryFilter(string $field, string $operator, callable $foreignStore, callable $foreignCriteria, string|callable $foreignField, string $foreignOperator, string $description = null): self
     {
-        return $this->registerFilter(
+        return $this->registerQueryFilter(
             field: $field,
             operator: $operator,
             description: $description,
@@ -379,9 +367,9 @@ abstract class AbstractSchema implements Schema
      * @param string|null $description
      * @return self
      */
-    protected function registerJoinedStoreFilter2(string $field, string $operator, callable $foreignStore, callable $foreignCriteria, callable $foreignValue, string $foreignOperator, string $description = null): self
+    protected function registerJoinedStoreQueryFilter2(string $field, string $operator, callable $foreignStore, callable $foreignCriteria, callable $foreignValue, string $foreignOperator, string $description = null): self
     {
-        return $this->registerFilter(
+        return $this->registerQueryFilter(
             field: $field,
             operator: $operator,
             description: $description,

@@ -17,7 +17,7 @@ class CreateRecordDialog extends Dialog
         $layer = $this->context->addLayer(sprintf('Create new %s', $this->table->getLabel()));
         $layer->update();
 
-        $fields = $this->table->getFields2();
+        $fields = $this->table->getFields();
         $record = [];
 
         // Ask for fields defined by the schema.

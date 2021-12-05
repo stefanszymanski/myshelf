@@ -26,7 +26,7 @@ class RecordView
      */
     public function renderTable(array $record): void
     {
-        $fields = $this->table->getFields2();
+        $fields = $this->table->getFields();
         // Build rows for the data fields (i.e. all fields except id and key).
         $dataRows = array_map(
             fn (Field $field) => [$field->label, $field->valueToString($record[$field->name] ?? null)],
@@ -59,7 +59,7 @@ class RecordView
      */
     public function renderEditTable(array $record, ?array $newRecord = null): void
     {
-        $fields = $this->table->getFields2();
+        $fields = $this->table->getFields();
         $dataRows = array_map(
             // TODO better String reprensentation of references, maybe add a method to Schema for returning a default title
             fn (Field $field) => [$field->label, $field->valueToString($record[$field->name] ?? null)],

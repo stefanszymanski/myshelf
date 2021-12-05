@@ -46,13 +46,12 @@ class Table
      * Field related methods
      * *********************/
 
-    // TODO rename method to getFields(), rename getFields() to getQueryFields()
     /**
      * @return array<Field>
      */
-    public function getFields2(): array
+    public function getFields(): array
     {
-        return $this->schema->getFields2();
+        return $this->schema->getFields();
     }
 
     /**
@@ -74,7 +73,7 @@ class Table
     /**
      * @return array<QueryField>
      */
-    public function getFields(): array
+    public function getQueryFields(): array
     {
         return $this->schema->getQueryFields();
     }
@@ -83,43 +82,43 @@ class Table
      * @param string $name
      * @return QueryField
      */
-    public function getField(string $name): QueryField
+    public function getQueryField(string $name): QueryField
     {
-        return $this->getFields()[$name];
+        return $this->getQueryFields()[$name];
     }
 
     /**
      * @return array<string>
      */
-    public function getFieldNames(): array
+    public function getQueryFieldNames(): array
     {
-        return array_keys($this->getFields());
+        return array_keys($this->getQueryFields());
     }
 
     /**
      * @param array<string> $fields
      * @return array<string> List of invalid field names
      */
-    public function checkFieldNames(array $fields): array
+    public function checkQueryFieldNames(array $fields): array
     {
-        return array_filter($fields, fn ($field) => !in_array($field, $this->getFieldNames()));
+        return array_filter($fields, fn ($field) => !in_array($field, $this->getQueryFieldNames()));
     }
 
     /**
      * @param null|array<string> $fields
      * @return array<string,string>
      */
-    public function getFieldLabels(array $fields = null): array
+    public function getQueryFieldLabels(array $fields = null): array
     {
         if (!$fields) {
             $labels = array_combine(
-                $this->getFieldNames(),
-                array_column($this->getFields(), 'label')
+                $this->getQueryFieldNames(),
+                array_column($this->getQueryFields(), 'label')
             );
         } else {
             $labels = [];
             foreach ($fields as $field) {
-                $labels[$field] = $this->getField($field)->label;
+                $labels[$field] = $this->getQueryField($field)->label;
             }
         }
         return $labels;
@@ -130,7 +129,7 @@ class Table
      *
      * @return array<string>
      */
-    public function getDefaultListFields(): array
+    public function getDefaultListQueryFields(): array
     {
         return $this->schema->getDefaultListFields();
     }
@@ -155,7 +154,7 @@ class Table
             $this->modifyQueryForField($qb, $fieldName);
         }
         foreach ($filters as list($fieldName, $operator, $fieldValue)) {
-            $qb = $this->modifyQueryForFilter($qb, $fieldName, $operator, $fieldValue);
+            $qb = $this->modifyQuery($qb, $fieldName, $operator, $fieldValue);
         }
         $qb->orderBy($orderBy);
         return $qb->getQuery()->fetch();
@@ -179,10 +178,10 @@ class Table
      *
      * @return array<QueryFilter>
      */
-    public function getFilters(): array
+    public function getQueryFilters(): array
     {
         $filters = [];
-        foreach ($this->schema->getFilters() as $fieldName => $fieldFilters) {
+        foreach ($this->schema->getQueryFilters() as $fieldName => $fieldFilters) {
             foreach ($fieldFilters as $fieldFilter) {
                 $filters[] = $fieldFilter;
             }
@@ -190,20 +189,20 @@ class Table
         return $filters;
     }
 
-    protected function getFilter(string $field, string $operator): QueryFilter
+    protected function getQueryFilter(string $field, string $operator): QueryFilter
     {
-        return $this->schema->getFilters()[$field][$operator];
+        return $this->schema->getQueryFilters()[$field][$operator];
     }
 
     protected function modifyQueryForField(QueryBuilder $qb, string $fieldName): QueryBuilder
     {
-        $field = $this->getField($fieldName);
+        $field = $this->getQueryField($fieldName);
         return $field->modifyQuery($qb, $fieldName, $this->db);
     }
 
-    protected function modifyQueryForFilter(QueryBuilder $qb, string $fieldName, string $operator, mixed $fieldValue): QueryBuilder
+    protected function modifyQuery(QueryBuilder $qb, string $fieldName, string $operator, mixed $fieldValue): QueryBuilder
     {
-        $filter = $this->getFilter($fieldName, $operator);
+        $filter = $this->getQueryFilter($fieldName, $operator);
         return $filter->modifyQuery($qb, $fieldValue, $this->db);
     }
 
@@ -213,11 +212,11 @@ class Table
      * *************************/
 
     /**
-     * @return array<Reference>
+     * @return array<ReferenceField>
      */
     public function getReferences(): array
     {
-        return $this->schema->getReferences();
+        return array_filter($this->getFields(), fn ($field) => $field instanceof ReferenceField);
     }
 
     /**
@@ -237,11 +236,11 @@ class Table
                 : '=';
             $referringRecords = $referringStore->createQueryBuilder()
                 ->select(['id', 'key'])
-                ->where([$reference->foreignField, $operator, $key])
+                ->where([$reference->name, $operator, $key])
                 ->getQuery()
                 ->fetch();
             if (!empty($referringRecords)) {
-                $records[sprintf('%s.%s', $reference->table, $reference->foreignField)] = $referringRecords;
+                $records[sprintf('%s.%s', $reference->table, $reference->name)] = $referringRecords;
             }
         }
         return $records;
@@ -249,7 +248,7 @@ class Table
 
     /**
      * @param string $targetTableName
-     * @return array<Reference>
+     * @return array<ReferenceField>
      */
     private function findReferences(string $targetTableName): array
     {

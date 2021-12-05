@@ -44,15 +44,15 @@ class ListCommand extends Command
         // TODO move argument validation to an earlier point in the command dispatching process, if possible
         // Validate arguments --fields, --orderby and --groupby
         $error = false;
-        if ($fields && $invalidFields = $this->table->checkFieldNames($fields)) {
+        if ($fields && $invalidFields = $this->table->checkQueryFieldNames($fields)) {
             $this->error(sprintf('Argument --fields contains invalid fields: %s', implode(', ', $invalidFields)));
             $error = true;
         }
-        if ($orderBy && $invalidOrderFields = $this->table->checkFieldNames(array_keys($orderBy))) {
+        if ($orderBy && $invalidOrderFields = $this->table->checkQueryFieldNames(array_keys($orderBy))) {
             $this->error(sprintf('Argument --orderby contains invalid fields: %s', implode(', ', $invalidOrderFields)));
             $error = true;
         }
-        if ($groupBy && $this->table->checkFieldNames([$groupBy])) {
+        if ($groupBy && $this->table->checkQueryFieldNames([$groupBy])) {
             $this->error(sprintf('Argument --groupby is not a valid field name'));
             $error = true;
         }
@@ -83,7 +83,7 @@ class ListCommand extends Command
         }
 
         $records = $this->table->find($fields, $orderBy, $filters, $exceptFields);
-        $headers = $this->table->getFieldLabels(array_diff($fields, $hiddenFields));
+        $headers = $this->table->getQueryFieldLabels(array_diff($fields, $hiddenFields));
 
         $this->renderTable($headers, $records, $hiddenFields, $groupBy);
     }
@@ -129,7 +129,7 @@ class ListCommand extends Command
     {
         $_fields = $this->option('fields');
         if (empty($_fields)) {
-            $fields = $this->table->getDefaultListFields();
+            $fields = $this->table->getDefaultListQueryFields();
         } else {
             $fields = array_filter(
                 array_map('trim', explode(',', $_fields))
