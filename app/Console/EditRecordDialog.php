@@ -222,7 +222,7 @@ class EditRecordDialog extends Dialog
             $fieldNumber = substr($action, 1);
             $action = substr($action, 0, 1);
         }
-        return !ctype_digit($fieldNumber) || (int) $fieldNumber < 1 || (int) $fieldNumber > sizeof($fields)
+        return !ctype_digit($fieldNumber) || (int) $fieldNumber < 0 || (int) $fieldNumber > sizeof($fields)
             ? [null, null]
             : [$action, (int) $fieldNumber];
     }
@@ -237,12 +237,12 @@ class EditRecordDialog extends Dialog
     protected function editField(array $record, int $fieldNumber): array
     {
         if ($fieldNumber === 0) {
-            // TODO edit key
+            $field = $this->table->getKeyField($record['id'] ?? null);
         } else {
             $fields = $this->table->getFields2();
             $field = $fields[$fieldNumber - 1];
-            $record[$field->name] = $field->ask($this->context, $record[$field->name] ?? null);
         }
+        $record[$field->name] = $field->ask($this->context, $record[$field->name] ?? null);
         return $record;
     }
 

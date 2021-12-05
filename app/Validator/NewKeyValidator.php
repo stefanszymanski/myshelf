@@ -13,7 +13,7 @@ class NewKeyValidator extends AbstractValidator
 {
     protected bool $allowEmpty = false;
 
-    public function __construct(protected Store $store)
+    public function __construct(protected Store $store, protected ?int $except = null)
     {
     }
 
@@ -22,7 +22,11 @@ class NewKeyValidator extends AbstractValidator
         if (!is_string($value)) {
             throw new \InvalidArgumentException('Argument $value must be a string');
         }
-        if ($this->store->findOneBy(['key', '=', $value])) {
+        $criteria = ['key', '=', $value];
+        if ($this->except) {
+            $criteria = [$criteria, ['id', '!==', $this->except]];
+        }
+        if ($this->store->findOneBy($criteria)) {
             throw new \Exception('This key is already used.');
         }
         return $value;

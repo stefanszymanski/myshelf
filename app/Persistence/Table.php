@@ -7,6 +7,7 @@ namespace App\Persistence;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Schema\Schema;
+use App\Validator\NewKeyValidator;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
@@ -52,6 +53,22 @@ class Table
     public function getFields2(): array
     {
         return $this->schema->getFields2();
+    }
+
+    /**
+     * Get a Field instance for the key.
+     *
+     * @param ?int $exceptId Record ID that will be ignored when the validator checks for conflicts
+     * @return Field
+     */
+    public function getKeyField(?int $exceptId = null): Field
+    {
+        return new Field(
+            table: $this->name,
+            name: 'key',
+            label: 'Key',
+            validators: [fn() => new NewKeyValidator($this->store, $exceptId)],
+        );
     }
 
     /**

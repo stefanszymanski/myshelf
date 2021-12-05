@@ -96,7 +96,7 @@ class RecordView
 
         // Build rows for ID and Key.
         // If the record doesn't have an ID-field, it's not persisted and that row is omitted.
-        $idRows = [['0', 'Key', $record['key'] ?? null]];
+        $idRows = [['0', 'Key', $record['key'] ?? null, $newRecord['key'] ?? null]];
         if (isset($record['id'])) {
             array_unshift($idRows, ['', 'ID', $record['id'] ?? null]);
         }
