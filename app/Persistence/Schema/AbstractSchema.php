@@ -4,12 +4,11 @@ namespace App\Persistence\Schema;
 
 use App\Persistence\Database;
 use App\Persistence\Field;
+use App\Persistence\FieldFactory;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Query\FieldType as QueryFieldType;
-use App\Persistence\ReferenceField;
 use App\Utility\RecordUtility;
-use App\Validator\NotEmptyValidator;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
 use Symfony\Component\Console\Question\Question;
@@ -48,7 +47,7 @@ abstract class AbstractSchema implements Schema
     /**
      * Registered table fields
      *
-     * @var array<string,Field>
+     * @var array<Field>
      */
     protected array $fields = [];
 
@@ -161,28 +160,15 @@ abstract class AbstractSchema implements Schema
      * @param string $label
      * @param bool $required Whether the field must have a non-empty value
      * @param callable(string):Question|null $question A callable that takes a default value as argument and returns a Question object
-     * @param array<callable(mixed):mixed>|callable(mixed):mixed $validator One or more callables that take a field value and throw an exception when the validation fails, return the field value
+     * @param array<callable(mixed):mixed>|callable(mixed):mixed $validators One or more callables that take a field value and throw an exception when the validation fails, return the field value
      * @param callable(mixed):string|null $formatter A callable that takes a field value and returns a string representation
      * @param string|null $description
      * @return self
      */
-    protected function registerField(string $name, string $label, bool $required = false, ?callable $question = null, array|callable $validator = [], ?callable $formatter = null, ?string $description = null)
+    protected function registerField(string $name, string $label, bool $required = false, ?callable $question = null, array|callable $validators = [], ?callable $formatter = null, ?string $description = null): self
     {
-        if (!is_array($validator)) {
-            $validator = [$validator];
-        }
-        if ($required) {
-            $validator[] = fn () => new NotEmptyValidator;
-        }
-        $this->fields[] = new Field(
-            table: $this->tableName,
-            name: $name,
-            label: $label,
-            description: $description,
-            question: $question,
-            validators: $validator,
-            formatter: $formatter,
-        );
+        $fieldFactory = new FieldFactory;
+        $this->fields[] = $fieldFactory->createField($this->tableName, $name, $label, $required, $question, $validators, $formatter, $description);
         return $this;
     }
 
@@ -193,25 +179,16 @@ abstract class AbstractSchema implements Schema
      * @param string $foreignTable Name of the referenced table
      * @param bool $multiple Whether the field holds multiple references
      * @param string $label
-     * @param bool $required Whether the field must have a non-empty value
      * @param callable(mixed):string|null $formatter A callable that takes a field value and returns a string representation
      * @param string|null $description
+     * @param bool $required Whether the field must have a non-empty value
+     * @param bool $sortable Whether the field values should be sortable, must not be true if `$multiple` is false
      * @return self
      */
-    protected function registerReferenceField(string $name, string $foreignTable, bool $multiple, string $label, bool $required = false, ?callable $formatter = null, ?string $description = null)
+    protected function registerReferenceField(string $name, string $foreignTable, string $label, bool $required = false, ?callable $formatter = null, ?string $description = null, bool $multiple = false, bool $sortable = false, ?string $elementLabel = null): self
     {
-        if ($required) {
-            $validators[] = fn () => new NotEmptyValidator;
-        }
-        $this->fields[] = new ReferenceField(
-            table: $this->tableName,
-            name: $name,
-            foreignTable: $foreignTable,
-            multiple: $multiple,
-            label: $label,
-            description: $description,
-            formatter: $formatter,
-        );
+        $fieldFactory = new FieldFactory;
+        $this->fields[] = $fieldFactory->createReferenceField($this->tableName, $name, $foreignTable, $label, $required, $formatter, $description, $multiple, $sortable, $elementLabel);
         return $this;
     }
 

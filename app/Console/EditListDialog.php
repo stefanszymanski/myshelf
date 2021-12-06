@@ -4,48 +4,45 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\ReferenceField;
+use App\Persistence\ListField;
+use App\Validator\IntegerValidator;
 
-class EditReferencesDialog extends Dialog
+class EditListDialog extends Dialog
 {
-    /**
-     * The referring field
-     *
-     * @var ReferenceField
-     */
-    protected ReferenceField $field;
+    protected ListField $field;
 
     /**
-     * Render a references edit dialog.
+     * Render a list edit dialog.
      *
-     * @param array<string> $keys
+     * @param array<string> $values
      * @return array<string>
      */
-    public function render(ReferenceField $field, array $keys): array
+    public function render(ListField $field, array $values): array
     {
         $this->field = $field;
-        $elements = array_map(fn ($answer) => [$answer, $answer], $keys);
+        $elements = array_map(fn ($answer) => [$answer, $answer], $values);
 
-        // Add a layer that prints the references list on each update.
+        // Add a layer that prints the elements list on each update.
         $layer = $this->context->addLayer(
-            sprintf('Edit %s references', $this->table->getLabel()),
+            sprintf('Edit list "%s"', $this->field->label),
             function() use (&$elements) {
                 $this->displayList($elements);
             },
         );
 
-        // TODO action for moving a line up/down?
         do {
             $exit = false;
 
             // Update the layer and ask for an action.
             $layer->update();
-            $action = $this->output->ask("Enter action [#,d#,r#,a,d!,r!,w,q,q!,?]");
+            $actions = $this->field->sortable
+                ? '[#,s#,d#,r#,a,d!,r!,w,q,q!,?]'
+                : '[#,d#,r#,a,d!,r!,w,q,q!,?]';
+            $action = $this->output->ask("Enter action $actions");
 
             switch ($action) {
                 case '?':
                     // Display help.
-                    /* $layer->skipNextUpdate(); */
                     $this->displayHelp();
                     break;
                 case 'w':
@@ -73,7 +70,7 @@ class EditReferencesDialog extends Dialog
                     }
                     break;
                 case 'd!':
-                    // Remove all added references and mark the initial ones for deletion.
+                    // Remove all added elements and mark the initial ones for deletion.
                     $elements = $this->clearList($elements);
                     break;
                 case 'q!':
@@ -88,7 +85,7 @@ class EditReferencesDialog extends Dialog
                 case 'a':
                 case 'n':
                 case 'c':
-                    // Add a new reference to the list.
+                    // Add a new element to the list.
                     $elements = $this->addToList($elements);
                     break;
                 default:
@@ -102,6 +99,13 @@ class EditReferencesDialog extends Dialog
                         case 'e':
                             $elements = $this->editElement($elements, $elementNumber);
                             break;
+                        case 's':
+                            if ($this->field->sortable) {
+                                $elements = $this->sortElement($elements, $elementNumber);
+                            } else {
+                                $this->error('Invalid action (the list is not sortable)');
+                            }
+                            break;
                         case 'd':
                             $elements = $this->removeElement($elements, $elementNumber);
                             break;
@@ -114,6 +118,7 @@ class EditReferencesDialog extends Dialog
                     }
             }
         } while (!$exit);
+
         $layer->finish();
         return array_filter(array_column($elements, 1));
     }
@@ -126,17 +131,21 @@ class EditReferencesDialog extends Dialog
     protected function displayHelp(): void
     {
         $lines = [
-            ' # - edit reference #',
-            'd# - delete reference #',
-            'r# - restore reference # to its original value',
-            ' a - add a reference, also [c,n]',
-            'd! - delete all references',
-            'r! - restore all references to their original state',
+            ' # - edit element #',
+            's# - set position of element #',
+            'd# - delete element #',
+            'r# - restore element # to its original value',
+            ' a - add an element, also [c,n]',
+            'd! - delete all elements',
+            'r! - restore all elements to their original state',
             ' w - save changes and quit, also [wq]',
             ' q - quit (asks for confirmation if there are changes)',
             'q! - quit without saving',
             ' ? - print help',
         ];
+        if (!$this->field->sortable) {
+            unset($lines[1]);
+        }
         $this->context->enqueue(fn () => $this->output->text($lines));
     }
 
@@ -170,20 +179,6 @@ class EditReferencesDialog extends Dialog
     }
 
     /**
-     * Display a record selection dialog.
-     *
-     * @param string|null $key Default answer for the record selection dialog
-     * @return string|null Key of the selected record
-     */
-    protected function askForRecord(?string $key = null): ?string
-    {
-        return (new RecordSelector(
-            $this->context,
-            $this->table)
-        )->render(sprintf('Select a %s', $this->field->label), $key);
-    }
-
-    /**
      * Reset the list to its initial state.
      *
      * @param array<array{string|null,string|null}> $list
@@ -212,14 +207,14 @@ class EditReferencesDialog extends Dialog
     }
 
     /**
-     * Add a new reference.
+     * Add a new element.
      *
      * @param array<array{string|null,string|null}> $list
      * @return array<array{string|null,string|null}> Updated list
      */
     protected function addToList(array $list): array
     {
-        $newValue = $this->askForRecord();
+        $newValue = $this->field->type->ask($this->context);
         if ($newValue) {
             if (!in_array($newValue, array_column($list, 1))) {
                 if (in_array($newValue, array_column($list, 0))) {
@@ -247,24 +242,24 @@ class EditReferencesDialog extends Dialog
      *
      * @param string $action
      * @param array<array{string|null,string|null}> $list
-     * @return array{string|null,int|null} Next action and number of the selected reference
+     * @return array{string|null,int|null} Next action and number of the selected element.
      */
     protected function parseElementAction(string $action, array $list): array
     {
         if (ctype_digit($action)) {
-            $fieldNumber = $action;
+            $elementNumber = $action;
             $action = 'e';
         } else {
-            $fieldNumber = substr($action, 1);
+            $elementNumber = substr($action, 1);
             $action = substr($action, 0, 1);
         }
-        return !ctype_digit($fieldNumber) || (int) $fieldNumber < 1 || (int) $fieldNumber > sizeof($list)
+        return !ctype_digit($elementNumber) || (int) $elementNumber < 1 || (int) $elementNumber > sizeof($list)
             ? [null, null]
-            : [$action, (int) $fieldNumber - 1];
+            : [$action, (int) $elementNumber - 1];
     }
 
     /**
-     * Edit a reference.
+     * Edit an element.
      *
      * @param array<array{string|null,string|null}> $list
      * @param int $elementNumber
@@ -272,7 +267,7 @@ class EditReferencesDialog extends Dialog
      */
     protected function editElement(array $list, int $elementNumber): array
     {
-        $newValue = $this->askForRecord($list[$elementNumber][1]);
+        $newValue = $this->field->type->ask($this->context, $list[$elementNumber][1]);
         if (!$newValue) {
             $this->warning('Nothing was selected, selection was dismissed');
         } else {
@@ -282,7 +277,39 @@ class EditReferencesDialog extends Dialog
     }
 
     /**
-     * Restore a reference.
+     * Set a new position for an element.
+     *
+     * @param array<array{string|null,string|null}> $list
+     * @param int $elementNumber
+     * @return array<array{string|null,string|null}> Updated list
+     */
+    protected function sortElement(array $list, int $elementNumber): array
+    {
+        // Ask for the new element position.
+        // Ensure that the wished position is in range.
+        $newPosition = (int) $this->context->output->ask(
+            'New position',
+            (string) ($elementNumber + 1),
+            fn ($answer) => (new IntegerValidator(1, sizeof($list)))->validate($answer),
+        ) - 1;
+        // Retain the selected element.
+        $element = $list[$elementNumber];
+        // Get elements except the selected one.
+        $list = [
+            ...array_slice($list, 0, $elementNumber),
+            ...array_slice($list, $elementNumber + 1)
+        ];
+        // Insert the selected element on the wished position.
+        $list = [
+            ...array_slice($list, 0, $newPosition),
+            $element,
+            ...array_slice($list, $newPosition)
+        ];
+        return $list;
+    }
+
+    /**
+     * Restore an element.
      *
      * @param array<array{string|null,string|null}> $list
      * @param int $elementNumber
@@ -297,7 +324,7 @@ class EditReferencesDialog extends Dialog
     }
 
     /**
-     * Remove a reference.
+     * Remove a element.
      *
      * @param array<array{string|null,string|null}> $list
      * @param int $elementNumber

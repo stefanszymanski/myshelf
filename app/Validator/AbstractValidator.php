@@ -8,7 +8,7 @@ abstract class AbstractValidator
 
     public function validate(mixed $value): mixed
     {
-        if (empty($value)) {
+        if ($value === null || $value === '' || (is_array($value) && empty($value))) {
             if ($this->allowEmpty) {
                 return $value;
             } else {

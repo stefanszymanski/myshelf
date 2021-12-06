@@ -36,29 +36,31 @@ class Book extends AbstractSchema
             ->registerField(
                 name: 'published',
                 label: 'Published',
-                validator: fn () => new IntegerValidator,
+                validators: fn () => new IntegerValidator,
             )
             ->registerField(
                 name: 'acquired',
                 label: 'Acquired',
-                validator: fn () => new LooseDateValidator,
+                validators: fn () => new LooseDateValidator,
             )
             ->registerReferenceField(
                 name: 'authors',
                 foreignTable: 'person',
                 multiple: true,
+                sortable: true,
                 label: 'Authors',
+                elementLabel: 'Author'
             )
             ->registerReferenceField(
                 name: 'editors',
                 foreignTable: 'person',
                 multiple: true,
+                sortable: true,
                 label: 'Editors',
             )
             ->registerReferenceField(
                 name: 'publisher',
                 foreignTable: 'publisher',
-                multiple: false,
                 label: 'Publisher',
             );
 
