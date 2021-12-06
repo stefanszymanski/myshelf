@@ -120,7 +120,7 @@ class EditListDialog extends Dialog
         } while (!$exit);
 
         $layer->finish();
-        return array_filter(array_column($elements, 1));
+        return array_values(array_filter(array_column($elements, 1)));
     }
 
     /**
