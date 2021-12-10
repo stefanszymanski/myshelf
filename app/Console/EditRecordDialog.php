@@ -162,11 +162,14 @@ class EditRecordDialog extends Dialog
     protected function displayRecord(array $record, array $newRecord): void
     {
         $isExistingRecord = isset($record['id']);
-        $recordView = new RecordView($this->input, $this->output, $this->table);
-        $recordView->renderEditTable(
-            $isExistingRecord ? $record : $newRecord,
-            $isExistingRecord ? $newRecord : null
-        );
+        (new DataTable($this->output))
+            ->setFields($this->table->getFields())
+            ->setData($isExistingRecord ? $record : $newRecord)
+            ->setNewData($isExistingRecord ? $newRecord : null)
+            ->setDisplayIdField(true)
+            ->setDisplayKeyField(true)
+            ->setDisplayFieldNumberColumn(true)
+            ->render();
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace App\Commands;
 
-use App\Console\RecordView;
+use App\Console\DataTable;
 use App\Persistence\Database;
 use LaravelZero\Framework\Commands\Command;
 
@@ -32,7 +32,11 @@ class ShowCommand extends Command
             return;
         }
 
-        $view = new RecordView($this->input, $this->output, $table);
-        $view->renderTable($record);
+        (new DataTable($this->output))
+            ->setFields($table->getFields())
+            ->setData($record)
+            ->setDisplayIdField(true)
+            ->setDisplayKeyField(true)
+            ->render();
     }
 }
