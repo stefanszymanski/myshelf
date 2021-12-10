@@ -8,6 +8,7 @@ use App\Persistence\FieldFactory;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Query\FieldType as QueryFieldType;
+use App\Persistence\StructField;
 use App\Utility\RecordUtility;
 use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
@@ -190,6 +191,31 @@ abstract class AbstractSchema implements Schema
         $fieldFactory = new FieldFactory;
         $this->fields[] = $fieldFactory->createReferenceField($this->tableName, $name, $foreignTable, $label, $required, $formatter, $description, $multiple, $sortable, $elementLabel);
         return $this;
+    }
+
+    /**
+     * Create a table field that contains subfields.
+
+     * @param string $name Name of the field
+     * @param string $label Label for the UI
+     * @param array<callable(mixed):mixed>|callable(mixed):mixed $validators One or more callables that take a field
+     *                                                                       value and throw an exception when the
+     *                                                                       validation fails, return the field value
+     * @param callable(mixed):string|null $formatter Callable that takes a field value and returns a string representation
+     * @param string|null $description Description for the UI
+     * @return StructField
+     */
+    protected function registerStructField(
+        string $name,
+        string $label,
+        array|callable $validators = [],
+        ?callable $formatter = null,
+        ?string $description = null,
+    ): StructField {
+        $fieldFactory = new FieldFactory;
+        $field = $fieldFactory->createStructField($this->tableName, $name, $label, $validators, $formatter, $description);
+        $this->fields[] = $field;
+        return $field;
     }
 
     /**

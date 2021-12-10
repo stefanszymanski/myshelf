@@ -113,4 +113,39 @@ class FieldFactory
         }
         return $field;
     }
+
+    /**
+     * Create a table field that contains subfields.
+     *
+     * @param string $tableName Name of the table that contains the field
+     * @param string $fieldName Name of the field
+     * @param string $label Label for the UI
+     * @param array<callable(mixed):mixed>|callable(mixed):mixed $validators One or more callables that take a field
+     *                                                                       value and throw an exception when the
+     *                                                                       validation fails, return the field value
+     * @param callable(mixed):string|null $formatter Callable that takes a field value and returns a string representation
+     * @param string|null $description Description for the UI
+     * @return StructField
+     */
+    public function createStructField(
+        string $tableName,
+        string $fieldName,
+        string $label,
+        array|callable $validators = [],
+        ?callable $formatter = null,
+        ?string $description = null,
+    ): StructField {
+        // TODO support multivalue fields
+        if (!is_array($validators)) {
+            $validators = [$validators];
+        }
+        return new StructField(
+            table: $tableName,
+            name: $fieldName,
+            label: $label,
+            description: $description,
+            validators: $validators,
+            formatter: $formatter,
+        );
+    }
 }
