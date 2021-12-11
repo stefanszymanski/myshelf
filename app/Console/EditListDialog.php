@@ -244,8 +244,11 @@ class EditListDialog extends Dialog
      * @param array<array{string|null,string|null}> $list
      * @return array{string|null,int|null} Next action and number of the selected element.
      */
-    protected function parseElementAction(string $action, array $list): array
+    protected function parseElementAction(?string $action, array $list): array
     {
+        if ($action === null) {
+            return [null, null];
+        }
         if (ctype_digit($action)) {
             $elementNumber = $action;
             $action = 'e';

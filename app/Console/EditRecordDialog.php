@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\ReferenceField;
-use App\Validator\ValidationException;
-
 class EditRecordDialog extends Dialog
 {
     /**
@@ -159,6 +156,11 @@ class EditRecordDialog extends Dialog
         $this->context->enqueue(fn () => $this->output->text($lines));
     }
 
+    /**
+     * @param array<string,mixed> $record
+     * @param array<string,mixed> $newRecord
+     * @return void
+     */
     protected function displayRecord(array $record, array $newRecord): void
     {
         $isExistingRecord = isset($record['id']);
@@ -215,9 +217,14 @@ class EditRecordDialog extends Dialog
      *
      * @param string $action
      * @return array{string|null,int|null} Next action and number of the selected field
+     *
+     * TODO move method somewhere else, because EditStructDialog and EditListDialog contain the same
      */
-    protected function parseFieldAction(string $action): array
+    protected function parseFieldAction(?string $action): array
     {
+        if ($action === null) {
+            return [null, null];
+        }
         $fields = $this->table->getFields();
         if (ctype_digit($action)) {
             $fieldNumber = $action;
@@ -285,10 +292,9 @@ class EditRecordDialog extends Dialog
     {
         if ($fieldNumber === 0) {
             $field = $this->table->getKeyField($record['id'] ?? null);
-            try {
-                $field->validate($originalRecord['key']);
+            if ($field->validate($originalRecord['key'])) {
                 $record['key'] = $originalRecord['key'];
-            } catch (ValidationException $e) {
+            } else {
                 $this->error('The key of the original record is used by another record');
             }
         } else {
