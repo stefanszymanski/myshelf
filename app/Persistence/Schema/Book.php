@@ -6,12 +6,28 @@ use App\Persistence\Database;
 use App\Persistence\Query\FieldType as QueryFieldType;
 use App\Utility\RecordUtility;
 use App\Validator\IntegerValidator;
+use App\Validator\IsbnValidator;
 use App\Validator\LooseDateValidator;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 
 class Book extends AbstractSchema
 {
+    // TODO use labels for fields with hardcoded values
+    protected const BINDINGS = [
+        'Hardcover',
+        'Hardcover with dust jacket',
+        'Paperback',
+        'Paperback with dust jacket',
+        'Other',
+    ];
+
+    protected const CONDITIONS = [
+        'new',
+        'used'
+    ];
+
     /**
      * {@inheritDoc}
      */
@@ -33,23 +49,13 @@ class Book extends AbstractSchema
                 label: 'Title',
                 required: true,
             )
-            ->registerField(
-                name: 'published',
-                label: 'Published',
-                validators: fn () => new IntegerValidator,
-            )
-            ->registerField(
-                name: 'acquired',
-                label: 'Acquired',
-                validators: fn () => new LooseDateValidator,
-            )
             ->registerReferenceField(
                 name: 'authors',
                 foreignTable: 'person',
                 multiple: true,
                 sortable: true,
                 label: 'Authors',
-                elementLabel: 'Author'
+                elementLabel: 'Author',
             )
             ->registerReferenceField(
                 name: 'editors',
@@ -57,14 +63,46 @@ class Book extends AbstractSchema
                 multiple: true,
                 sortable: true,
                 label: 'Editors',
+                elementLabel: 'Editor',
+            )
+            ->registerField(
+                name: 'binding',
+                label: 'Binding',
+                question: fn ($value) => new ChoiceQuestion('Select a binding', static::BINDINGS, $value),
             )
             ->registerReferenceField(
                 name: 'publisher',
                 foreignTable: 'publisher',
                 label: 'Publisher',
+            )
+            ->registerField(
+                name: 'published',
+                label: 'Published',
+                validators: fn () => new IntegerValidator,
+            )
+            ->registerField(
+                name: 'isbn',
+                label: 'ISBN',
+                validators: fn () => new IsbnValidator,
             );
 
-
+        $this
+            ->registerStructField(
+                name: 'acquired',
+                label: 'Acquired',
+            )->addField(
+                name: 'at',
+                label: 'Date',
+                validators: fn () => new LooseDateValidator,
+            )->addField(
+                name: 'from',
+                label: 'From',
+            )->addField(
+                // TODO define more conditions
+                name: 'as',
+                label: 'Condition',
+                question: fn ($value) => new ChoiceQuestion('Select a condition', static::CONDITIONS, $value),
+            );
     }
 
     protected function configure(): void
@@ -84,8 +122,28 @@ class Book extends AbstractSchema
                 type: QueryFieldType::Real,
             )
             ->registerQueryField(
-                name: 'acquired',
-                label: 'Acquired',
+                name: 'binding',
+                label: 'Binding',
+                type: QueryFieldType::Real,
+            )
+            ->registerQueryField(
+                name: 'isbn',
+                label: 'ISBN',
+                type: QueryFieldType::Real,
+            )
+            ->registerQueryField(
+                name: 'acquired.at',
+                label: 'Acquired at',
+                type: QueryFieldType::Real,
+            )
+            ->registerQueryField(
+                name: 'acquired.from',
+                label: 'Acquired from',
+                type: QueryFieldType::Real,
+            )
+            ->registerQueryField(
+                name: 'acquired.as',
+                label: 'Acquired as',
                 type: QueryFieldType::Real,
             );
 
