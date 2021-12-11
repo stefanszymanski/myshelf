@@ -4,6 +4,7 @@ namespace App\Commands;
 
 use App\Persistence\Database;
 use App\Persistence\Table;
+use Illuminate\Support\Arr;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table as ConsoleTable;
 use Symfony\Component\Console\Helper\TableCell;
@@ -83,6 +84,7 @@ class ListCommand extends Command
         }
 
         $records = $this->table->find($fields, $orderBy, $filters, $exceptFields);
+        $records = array_map(Arr::dot(...), $records);
         $headers = $this->table->getQueryFieldLabels(array_diff($fields, $hiddenFields));
 
         $this->renderTable($headers, $records, $hiddenFields, $groupBy);
