@@ -1,23 +1,19 @@
 {
-    "name": "laravel-zero/laravel-zero",
-    "description": "The Laravel Zero Framework.",
-    "keywords": ["framework", "laravel", "laravel zero", "console", "cli"],
-    "homepage": "https://laravel-zero.com",
+    "name": "sszymanski/myshelf",
+    "description": "Book management CLI tool",
+    "keywords": ["laravel", "laravel zero", "console", "cli"],
     "type": "project",
-    "license": "MIT",
-    "support": {
-        "issues": "https://github.com/laravel-zero/laravel-zero/issues",
-        "source": "https://github.com/laravel-zero/laravel-zero"
-    },
+    "license": "GPL-3.0-or-later",
     "authors": [
         {
-            "name": "Nuno Maduro",
-            "email": "enunomaduro@gmail.com"
+            "name": "Stefan Szymanski",
+            "email": "stefan.szymanski@posteo.de"
         }
     ],
     "require": {
         "php": "^8.1",
         "laravel-zero/framework": "^8.8",
+        "nicebooks/isbn": "^0.3.9",
         "rakibtg/sleekdb": "^2.13",
         "symfony/string": "^5.3"
     },
