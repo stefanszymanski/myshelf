@@ -41,6 +41,8 @@ class RecordUtility
             return $value ? 'true' : 'false';
         } elseif (is_null($value)) {
             return '';
+        } elseif (is_object($value)) {
+            return get_class($value);
         } else {
             return gettype($value);
         }
