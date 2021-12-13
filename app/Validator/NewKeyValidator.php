@@ -27,7 +27,7 @@ class NewKeyValidator extends AbstractValidator
             $criteria = [$criteria, ['id', '!==', $this->except]];
         }
         if ($this->store->findOneBy($criteria)) {
-            throw new \Exception('This key is already used.');
+            throw new ValidationException('This key is already used.');
         }
         return $value;
     }
