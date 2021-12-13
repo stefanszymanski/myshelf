@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Persistence;
 
 use App\Validator\NotEmptyValidator;
+use App\Validator\OptionsValidator;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\Question;
 
 class FieldFactory
@@ -146,6 +148,49 @@ class FieldFactory
             description: $description,
             validators: $validators,
             formatter: $formatter,
+        );
+    }
+
+    /**
+     * Create a table field with a fixed set of values.
+     *
+     * @param string $tableName Name of the table that contains the field
+     * @param string $fieldName Field name
+     * @param string $label
+     * @param array<mixed,string> $options Keys are stored, values are labels for the UI
+     * @param bool $required Whether the field must have a non-empty value
+     * @param string|null $description
+     * @return Field
+     */
+    public function createSelectField(
+        string $tableName,
+        string $fieldName,
+        string $label,
+        array $options,
+        bool $required = false,
+        ?string $description = null
+    ) {
+        $question = function ($defaultValue) use ($options, $label) {
+            $value = array_search($defaultValue, array_keys($options)) ?: null;
+            return new ChoiceQuestion(sprintf('Select a %s', $label), array_values($options), $value);
+        };
+        $validators = [
+            fn () => new OptionsValidator(array_keys($options))
+        ];
+        $formatter = fn ($value = null) => match (true) {
+            empty($value) => '',
+            array_key_exists($value, $options) => $options[$value],
+            default => sprintf('<bg=red>invalid: %s</>', $value)
+        };
+        return $this->createField(
+            $tableName,
+            $fieldName,
+            $label,
+            $required,
+            $question,
+            $validators,
+            $formatter,
+            $description,
         );
     }
 }

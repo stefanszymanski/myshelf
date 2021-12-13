@@ -219,6 +219,28 @@ abstract class AbstractSchema implements Schema
     }
 
     /**
+     * Create a table field with a fixed set of values.
+     *
+     * @param string $name Field name
+     * @param string $label
+     * @param array<mixed,string> $options Keys are stored, values are labels for the UI
+     * @param bool $required Whether the field must have a non-empty value
+     * @param string|null $description
+     * @return self
+     */
+    public function registerSelectField(
+        string $name,
+        string $label,
+        array $options,
+        bool $required = false,
+        ?string $description = null
+    ): self {
+        $fieldFactory = new FieldFactory;
+        $this->fields[] = $fieldFactory->createSelectField($this->tableName, $name, $label, $options, $required, $description);
+        return $this;
+    }
+
+    /**
      * Register a field for querying records.
      *
      * @param string $name Unique identifier of the field

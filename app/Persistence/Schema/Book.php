@@ -10,22 +10,22 @@ use App\Validator\IsbnValidator;
 use App\Validator\LooseDateValidator;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
-use Symfony\Component\Console\Question\ChoiceQuestion;
 
 class Book extends AbstractSchema
 {
-    // TODO use labels for fields with hardcoded values
+    // TODO add more bindings
     protected const BINDINGS = [
-        'Hardcover',
-        'Hardcover with dust jacket',
-        'Paperback',
-        'Paperback with dust jacket',
-        'Other',
+        'hardcover' => 'Hardcover',
+        'hardcover-jacket' => 'Hardcover with dust jacket',
+        'paperback' => 'Paperback',
+        'paperback-jacket' => 'Paperback with dust jacket',
+        'other' => 'Other',
     ];
 
+    // TODO add more conditions
     protected const CONDITIONS = [
-        'new',
-        'used'
+        'new' => 'New',
+        'used' => 'Used',
     ];
 
     /**
@@ -65,10 +65,11 @@ class Book extends AbstractSchema
                 label: 'Editors',
                 elementLabel: 'Editor',
             )
-            ->registerField(
+            ->registerSelectField(
                 name: 'binding',
                 label: 'Binding',
-                question: fn ($value) => new ChoiceQuestion('Select a binding', static::BINDINGS, $value),
+                required: true,
+                options: self::BINDINGS,
             )
             ->registerReferenceField(
                 name: 'publisher',
@@ -97,11 +98,10 @@ class Book extends AbstractSchema
             )->addField(
                 name: 'from',
                 label: 'From',
-            )->addField(
-                // TODO define more conditions
+            )->addSelectField(
                 name: 'as',
                 label: 'Condition',
-                question: fn ($value) => new ChoiceQuestion('Select a condition', static::CONDITIONS, $value),
+                options: self::CONDITIONS,
             );
     }
 

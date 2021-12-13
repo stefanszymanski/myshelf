@@ -142,4 +142,33 @@ class StructField extends Field
         );
         return $this;
     }
+
+    /**
+     * Add a field with a fixed set of values.
+     *
+     * @param string $name Field name
+     * @param string $label
+     * @param array<mixed,string> $options Keys are stored, values are labels for the UI
+     * @param bool $required Whether the field must have a non-empty value
+     * @param string|null $description
+     * @return self
+     */
+    public function addSelectField(
+        string $name,
+        string $label,
+        array $options,
+        bool $required = false,
+        ?string $description = null
+    ): self {
+        $fieldFactory = new FieldFactory;
+        $this->fields[$name] = $fieldFactory->createSelectField(
+            $this->table,
+            $name,
+            $label,
+            $options,
+            $required,
+            $description
+        );
+        return $this;
+    }
 }
