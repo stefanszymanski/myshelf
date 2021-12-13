@@ -41,11 +41,10 @@ class Field
      */
     public function ask(Context $context, mixed $defaultAnswer = null): mixed
     {
-        if (!$this->question) {
-            $question = $this->createDefaultQuestion($defaultAnswer);
-        } else {
-            $question = call_user_func($this->question, $defaultAnswer);
-        }
+        $question = $this->question ?
+            call_user_func($this->question, $defaultAnswer)
+            : $this->createDefaultQuestion($defaultAnswer);
+        $question->setValidator($this->buildQuestionValidator());
         return $context->output->askQuestion($question);
     }
 
@@ -84,13 +83,18 @@ class Field
     {
         $question = new Question($this->label, $defaultAnswer);
         if (!empty($this->validators)) {
-            $question->setValidator((function($answer) {
-                foreach ($this->validators as $validatorFactory) {
-                    $answer = call_user_func($validatorFactory)($answer);
-                }
-                return $answer;
-            })->bindTo($this));
+            $question->setValidator();
         }
         return $question;
+    }
+
+    protected function buildQuestionValidator(): \Closure
+    {
+        return (function($answer) {
+            foreach ($this->validators as $validatorFactory) {
+                $answer = call_user_func($validatorFactory)($answer);
+            }
+            return $answer;
+        })->bindTo($this);
     }
 }
