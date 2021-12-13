@@ -200,6 +200,7 @@ class DataTable
                 $newValue = $this->newData['key'] ?? null;
                 $row[] = $this->formatNewValue($value, $newValue);
             }
+            $rows[] = $row;
         }
         if ($this->displayIdField && isset($this->data['id'])) {
             $row = ['ID', $this->data['id'] ?? null];
