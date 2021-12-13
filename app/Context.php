@@ -30,6 +30,7 @@ class Context
     protected Cursor $cursor;
 
 
+    // TODO replace SymfonyStyle with OutputInterface?
     public function __construct(
         public readonly InputInterface $input,
         public readonly SymfonyStyle $output,
