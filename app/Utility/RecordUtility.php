@@ -2,20 +2,8 @@
 
 namespace App\Utility;
 
-use Symfony\Component\String\UnicodeString;
-
 class RecordUtility
 {
-    static public function createKey(?string ...$parts): string
-    {
-        $parts = array_filter($parts);
-        $key = strtolower(implode('-', $parts));
-        $key = (new UnicodeString($key))->ascii();
-        $key = preg_replace('/-+/', '-', $key);
-        $key = preg_replace('/[ ]/', '-', $key);
-        return $key;
-    }
-
     /**
      * Convert a value into a string.
      *

@@ -2,7 +2,7 @@
 
 namespace App\Validator;
 
-abstract class AbstractValidator
+abstract class AbstractValidator implements Validator
 {
     /**
      * Whether an empty value should pass the validation.

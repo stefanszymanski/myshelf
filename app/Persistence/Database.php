@@ -31,7 +31,7 @@ class Database
     /**
      * @param Application $app
      * @param string $datadir SleekDB data directory
-     * @param array<mixed> $configuration SleekDB configuratoin
+     * @param array<mixed> $configuration SleekDB configuration
      */
     public function __construct(
         protected Application $app,

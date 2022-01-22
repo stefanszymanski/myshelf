@@ -4,15 +4,25 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
+use App\Persistence\Data\ContainerFieldContract;
+use App\Persistence\Data\Field as DataField;
+use App\Persistence\Data\References;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Schema\Schema;
-use App\Validator\NewKeyValidator;
+use InvalidArgumentException;
+use SleekDB\Exceptions\InvalidArgumentException as ExceptionsInvalidArgumentException;
 use SleekDB\QueryBuilder;
 use SleekDB\Store;
 
 class Table
 {
+    /**
+     * @param Database $db
+     * @param Schema $schema
+     * @param Store $store
+     * @param string $name
+     */
     public function __construct(
         protected Database $db,
         protected Schema $schema,
@@ -21,57 +31,77 @@ class Table
     ) {
     }
 
-    public function getLabel(): string
+
+    /* **************
+     * Record methods
+     * **************/
+
+    /**
+     * Get the title for a record.
+     *
+     * @param int|record $recordOrId
+     * @return string
+     */
+    public function getRecordTitle(int|array $recordOrId): string
     {
-        return $this->schema->getLabel();
+        $record = is_int($recordOrId)
+            ? $this->store->findById($recordOrId)
+            : $recordOrId;
+        return $this->schema->getRecordTitle($record, $this, $this->db);
+    }
+
+    /* **************************
+     * Data Field related methods
+     * **************************/
+
+    /**
+     * Get all data fields.
+     *
+     * @return array<string,DataField>
+     */
+    public function getDataFields(): array
+    {
+        return $this->schema->getDataFields();
     }
 
     /**
-     * Create a default key for a record.
+     * Get a data field by its path.
      *
-     * @param array<string,mixed> A record
-     * @return string A record key
+     * @param string $fieldName
+     * @return DataField
+     * @throws InvalidArgumentException if `$fieldName` is invalid.
      */
-    public function createKeyForRecord(array $record): string
+    public function getDataField(string $fieldName): DataField
     {
-        $key = $this->schema->createKeyForRecord($record);
-        if (!$key) {
-            throw new \Exception('Could not create a default record key');
+        $dataFields = $this->getDataFields();
+        if (str_contains($fieldName, '.')) {
+            list($rootFieldName, $subFieldName) = explode('.', $fieldName, 2);
+            if (!isset($dataFields[$rootFieldName])) {
+                throw new \InvalidArgumentException("Invalid data field name: $fieldName");
+            }
+            $rootField = $dataFields[$rootFieldName];
+            if (!($rootField instanceof ContainerFieldContract)) {
+                throw new \InvalidArgumentException("Invalid data field name: $fieldName");
+            }
+            $field = $rootField->getField($subFieldName);
+        } else {
+            if (!isset($dataFields[$fieldName])) {
+                throw new \InvalidArgumentException("Invalid data field name: $fieldName");
+            }
+            $field = $dataFields[$fieldName];
         }
-        return $key;
+        return $field;
     }
 
 
-    /* *********************
-     * Field related methods
-     * *********************/
+    /* ***************************
+     * Query Field related methods
+     * ***************************/
 
     /**
-     * @return array<Field>
-     */
-    public function getFields(): array
-    {
-        return $this->schema->getFields();
-    }
-
-    /**
-     * Get a Field instance for the key.
+     * Get all query fields.
      *
-     * @param ?int $exceptId Record ID that will be ignored when the validator checks for conflicts
-     * @return Field
-     */
-    public function getKeyField(?int $exceptId = null): Field
-    {
-        return new Field(
-            table: $this->name,
-            name: 'key',
-            label: 'Key',
-            validators: [fn() => new NewKeyValidator($this->store, $exceptId)],
-        );
-    }
-
-    /**
-     * @return array<QueryField>
+     * @return array<string,QueryField>
      */
     public function getQueryFields(): array
     {
@@ -79,15 +109,20 @@ class Table
     }
 
     /**
-     * @param string $name
+     * Get a query field by its name.
+     *
+     * @param string $fieldName
      * @return QueryField
+     * @throw \InvalidArgumentException if there is no query field with the given name.
      */
-    public function getQueryField(string $name): QueryField
+    public function getQueryField(string $fieldName): QueryField
     {
-        return $this->getQueryFields()[$name];
+        return $this->getQueryFields()[$fieldName] ?? throw new \InvalidArgumentException("Invalid query field name: $fieldName");
     }
 
     /**
+     * Get the names of all query fields.
+     *
      * @return array<string>
      */
     public function getQueryFieldNames(): array
@@ -96,85 +131,68 @@ class Table
     }
 
     /**
-     * @param array<string> $fields
-     * @return array<string> List of invalid field names
-     */
-    public function checkQueryFieldNames(array $fields): array
-    {
-        return array_filter($fields, fn ($field) => !in_array($field, $this->getQueryFieldNames()));
-    }
-
-    /**
-     * @param null|array<string> $fields
-     * @return array<string,string>
-     */
-    public function getQueryFieldLabels(array $fields = null): array
-    {
-        if (!$fields) {
-            $labels = array_combine(
-                $this->getQueryFieldNames(),
-                array_column($this->getQueryFields(), 'label')
-            );
-        } else {
-            $labels = [];
-            foreach ($fields as $field) {
-                $labels[$field] = $this->getQueryField($field)->label;
-            }
-        }
-        return $labels;
-    }
-
-    /**
-     * Get a list of default fields for the list view.
+     * Get query field labels by field names.
      *
+     * @param array<string> $queryFieldNames
      * @return array<string>
      */
-    public function getDefaultListQueryFields(): array
+    public function getQueryFieldLabels(array $queryFieldNames): array
     {
-        return $this->schema->getDefaultListFields();
-    }
-
-
-    /* *********************
-     * Query related methods
-     * *********************/
-
-    /**
-     * @param array<string> $fields
-     * @param array<string,string> $orderBy
-     * @param array<array{string,string,string}> $filters
-     * @param array<string> $excludeFields
-     * @return array<array<string,mixed>>>
-     */
-    public function find(array $fields, array $orderBy = [], array $filters = [], array $excludeFields = []): array
-    {
-        $qb = $this->store->createQueryBuilder();
-        $qb->except($excludeFields);
-        foreach ($fields as $fieldName) {
-            $this->modifyQueryForField($qb, $fieldName);
-        }
-        foreach ($filters as list($fieldName, $operator, $fieldValue)) {
-            $qb = $this->modifyQuery($qb, $fieldName, $operator, $fieldValue);
-        }
-        $qb->orderBy($orderBy);
-        return $qb->getQuery()->fetch();
+        return array_map($this->getQueryFieldLabel(...), $queryFieldNames);
     }
 
     /**
-     * Find a record by its key or ID.
+     * Get the label for a query field by its name.
      *
-     * @param string|int $keyOrId Key or ID of a record
-     * @return array|null Either a record if one is found or null
+     * @param string $queryFieldName
+     * @return string
      */
-    public function findByKeyOrId(string|int $keyOrId): ?array
+    public function getQueryFieldLabel(string $queryFieldName): string
     {
-        return ctype_digit($keyOrId)
-            ? $this->store->findById($keyOrId)
-            : $this->store->findOneBy(['key', '=', $keyOrId]);
+        $labelParts = [];
+        list($queryFieldName, $subQueryFieldName) = $this->splitQueryFieldPath($queryFieldName);
+        $queryField = $this->getQueryField($queryFieldName);
+        $labelParts[] = $queryField->getLabel();
+        while ($subQueryFieldName) {
+            list($queryFieldName, $subQueryFieldName) = $this->splitQueryFieldPath($subQueryFieldName);
+            $queryField = $queryField->getSubQueryField($queryFieldName, $this->db, $this);
+            $labelParts[] = $queryField->getLabel();
+        }
+        return implode(' | ', $labelParts);
     }
 
     /**
-     * Get all filters.
+     * Split a query field path into its first part and rest.
+     *
+     * @param string $queryFieldPath
+     * @return array{string,string}
+     */
+    protected function splitQueryFieldPath(string $queryFieldPath): array
+    {
+        return array_pad(explode(':', $queryFieldPath, 2), 2, null);
+    }
+
+    /**
+     * Check for invalid query field names.
+     *
+     * @param array<string> $queryFieldNames
+     * @return array<string> List of invalid field names
+     */
+    public function checkQueryFieldNames(array $queryFieldNames): array
+    {
+        return collect($queryFieldNames)
+            ->map(fn ($name) => explode(':', $name, 2)[0])
+            ->filter(fn ($name) => !in_array($name, $this->getQueryFieldNames()))
+            ->all();
+    }
+
+
+    /* ***************************
+     * Query Field related methods
+     * ***************************/
+
+    /**
+     * Get all query filters.
      *
      * @return array<QueryFilter>
      */
@@ -189,21 +207,103 @@ class Table
         return $filters;
     }
 
-    protected function getQueryFilter(string $field, string $operator): QueryFilter
+    /**
+     * Find a query filter for the given name and operator.
+     *
+     * @param string $filterName
+     * @param string $operator
+     * @return QueryFilter
+     * @throws InvalidArgumentException if no suitable filter is found.
+     */
+    public function findQueryFilter(string $filterName, string $operator): QueryFilter
     {
-        return $this->schema->getQueryFilters()[$field][$operator];
+        foreach ($this->schema->getQueryFilters() as $name => $queryFilter) {
+            if (str_starts_with($filterName, $name) && $queryFilter->canHandle($filterName, $operator, $this->db)) {
+                return $queryFilter;
+            }
+        }
+        throw new \InvalidArgumentException("Cannot find filter: $filterName $operator");
     }
 
-    protected function modifyQueryForField(QueryBuilder $qb, string $fieldName): QueryBuilder
+
+    /* *********************
+     * Query related methods
+     * *********************/
+
+    /**
+     * @param array<string> $fields
+     * @param array<string,string> $orderBy
+     * @param array<array{string,string,mixed}> $filters
+     * @param array<string> $excludeFields
+     * @return array<array<string,mixed>>>
+     */
+    public function find(array $fields, array $orderBy = [], array $filters = [], array $excludeFields = []): array
     {
+        $qb = $this->store->createQueryBuilder();
+        $qb->except($excludeFields);
+        foreach ($fields as $fieldName) {
+            $this->modifyQueryForField($qb, $fieldName);
+        }
+        foreach ($filters as list($fieldName, $operator, $fieldValue)) {
+            $qb = $this->modifyQueryForFilter($qb, $fieldName, $operator, $fieldValue);
+        }
+        $qb->orderBy($orderBy);
+        $qb->limit($limit);
+        $qb->skip($offset);
+        return $qb->getQuery()->fetch();
+    }
+
+    /**
+     * @param array<int> $ids
+     * @param array<string> $fields
+     * @return array<record>
+     * @throws ExceptionsInvalidArgumentException
+     * @throws InvalidArgumentException
+     */
+    public function findByIds(array $ids, array $fields): array
+    {
+        return $this->find(fields: $fields, filters: [['id', '#', $ids]]);
+    }
+
+    /**
+     * @param int $id
+     * @param array<string> $fields
+     * @return null|record
+     * @throws ExceptionsInvalidArgumentException
+     */
+    public function findById(int $id, array $fields): ?array
+    {
+        $records = $this->findByIds([$id], $fields);
+        return empty($records) ? null : $records[0];
+    }
+
+    /**
+     * Modify a query to include the given field.
+     *
+     * @param QueryBuilder $qb
+     * @param string $fieldPath
+     * @return QueryBuilder
+     */
+    protected function modifyQueryForField(QueryBuilder $qb, string $fieldPath): QueryBuilder
+    {
+        list($fieldName, $subFieldPath) = array_pad(explode(':', $fieldPath, 2), 2, null);
         $field = $this->getQueryField($fieldName);
-        return $field->modifyQuery($qb, $fieldName, $this->db);
+        return $field->modifyQuery($qb, $fieldPath, $subFieldPath, $this->db, $this);
     }
 
-    protected function modifyQuery(QueryBuilder $qb, string $fieldName, string $operator, mixed $fieldValue): QueryBuilder
+    /**
+     * Modify a query to apply the given filter.
+     *
+     * @param QueryBuilder $qb
+     * @param string $fieldName
+     * @param string $operator
+     * @param mixed $fieldValue
+     * @return QueryBuilder
+     */
+    protected function modifyQueryForFilter(QueryBuilder $qb, string $fieldName, string $operator, mixed $fieldValue): QueryBuilder
     {
-        $filter = $this->getQueryFilter($fieldName, $operator);
-        return $filter->modifyQuery($qb, $fieldValue, $this->db);
+        $filter = $this->findQueryFilter($fieldName, $operator);
+        return $filter->modifyQuery($qb, $fieldName, $operator, $fieldValue, $this->db, $this);
     }
 
 
@@ -212,35 +312,40 @@ class Table
      * *************************/
 
     /**
-     * @return array<ReferenceField>
+     * @return References
      */
-    public function getReferences(): array
+    public function getReferences(): References
     {
-        return array_filter($this->getFields(), fn ($field) => $field instanceof ReferenceField);
+        $references = new References;
+        foreach ($this->schema->getDataFields() as $fieldName => $field) {
+            $subReferences = $field->getReferences();
+            $subReferences->indent($fieldName);
+            $references->merge($subReferences);
+        }
+        return $references;
     }
 
     /**
      * Find records referring the specified record
      *
-     * @param string $key Key of the references record
+     * @param int $id Key of the references record
      * @return array<string,array<string,mixed>> Key is {type}.{field}, value is the referring record
      */
-    public function findReferringRecords(string $key): array
+    public function findReferringRecords(int $id): array
     {
         $records = [];
         $references = $this->findReferences($this->name);
-        foreach ($references as $reference) {
-            $referringStore = $this->db->getTable($reference->table)->store;
-            $operator = $reference->multiple
+        foreach ($references as list($referringTableName, $referringFieldName)) {
+            $referringStore = $this->db->getTable($referringTableName)->store;
+            // TODO determine the operator and field name without string functions
+            // TODO handle list structs, e.g. "content.*.authors.*"
+            $operator = str_ends_with($referringFieldName, '.*')
                 ? 'CONTAINS'
                 : '=';
-            $referringRecords = $referringStore->createQueryBuilder()
-                ->select(['id', 'key'])
-                ->where([$reference->name, $operator, $key])
-                ->getQuery()
-                ->fetch();
+            $referringFieldName = substr($referringFieldName, 0, -2);
+            $referringRecords = $referringStore->findBy([$referringFieldName, $operator, $id]);
             if (!empty($referringRecords)) {
-                $records[sprintf('%s.%s', $reference->table, $reference->name)] = $referringRecords;
+                $records[sprintf('%s.%s', $referringTableName, $referringFieldName)] = $referringRecords;
             }
         }
         return $records;
@@ -248,20 +353,48 @@ class Table
 
     /**
      * @param string $targetTableName
-     * @return array<ReferenceField>
+     * @return array<array{string,string}> List of tuples of referring table and field name
      */
     private function findReferences(string $targetTableName): array
     {
         $references = [];
         foreach ($this->db->getTables() as $originTable) {
             $originReferences = $originTable->getReferences();
-            foreach ($originReferences as $originFieldName => $originReference) {
-                if ($originReference->foreignTable === $targetTableName) {
-                    $references[] = $originReference;
+            foreach ($originReferences->get() as $originFieldName => list($referenceTableName, $fieldPath)) {
+                if ($referenceTableName === $targetTableName) {
+                    $references[] = [$originTable->name, $fieldPath];
                 }
             }
         }
         return $references;
+    }
+
+
+    /* **********************
+     * Dialog related methods
+     * **********************/
+
+    /**
+     * Get data fields to ask for in the New Record Dialog.
+     *
+     * @return array<DataField>
+     */
+    public function getNewRecordDialogFields(): array
+    {
+        $fieldNames = $this->schema->getNewRecordDialogFieldNames();
+        return collect($this->getDataFields())
+            ->filter(fn ($field, $fieldName) => in_array($fieldName, $fieldNames))
+            ->all();
+    }
+
+    /**
+     * Get a list of default query fields for the list view.
+     *
+     * @return array<string>
+     */
+    public function getDefaultListQueryFields(): array
+    {
+        return $this->schema->getDefaultListFields();
     }
 
     /**
@@ -278,7 +411,7 @@ class Table
      * Parse the user input from record selection dialog into record default values.
      *
      * @param string $value
-     * @return array<string,mixed>
+     * @return record
      */
     public function getDefaultsFromAutocompleteInput(string $value): array
     {

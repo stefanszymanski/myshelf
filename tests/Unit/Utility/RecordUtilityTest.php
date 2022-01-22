@@ -2,23 +2,6 @@
 
 use App\Utility\RecordUtility;
 
-it('creates key from a single lower case word', function() {
-    expect(RecordUtility::createKey('akey'))->toBe('akey');
-});
-
-it('creates key from a camel case word', function() {
-    expect(RecordUtility::createKey('ThisIsAKey'))->toBe('thisisakey');
-});
-
-it('creates key from a multiple word', function() {
-    expect(RecordUtility::createKey('these', 'are', 'multiple', 'word'))->toBe('these-are-multiple-word');
-});
-
-it('creates key and normalizes non-ascii characters', function() {
-    expect(RecordUtility::createKey('äöüßé'))->toBe('aousse');
-});
-
-
 it('converts string to string', function() {
     expect(RecordUtility::convertToString('a string'))->toBe('a string');
 });

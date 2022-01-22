@@ -5,33 +5,37 @@ declare(strict_types=1);
 namespace App\Persistence\Query;
 
 use App\Persistence\Database;
+use App\Persistence\Table;
 use SleekDB\QueryBuilder;
 
-class Field
+interface Field
 {
     /**
-     * @var callable
+     * Modify a query.
+     *
+     * @param QueryBuilder $qb Query
+     * @param string $alias Name of the result field
+     * @param string|null $queryFieldPath Path of referrenced query fields
+     * @param Database $db
+     * @param Table $table Current table
+     * @return QueryBuilder The modified query
      */
-    protected mixed $queryModifier;
-
-    public function __construct(
-        public readonly string $name,
-        public readonly string $label,
-        public readonly FieldType $type,
-        callable $modifyQuery,
-        public readonly ?string $description = null,
-    ) {
-        $this->queryModifier = $modifyQuery;
-    }
+    public function modifyQuery(QueryBuilder $qb, string $alias, ?string $queryFieldPath, Database $db, Table $table): QueryBuilder;
 
     /**
-     * @param QueryBuilder $qb
-     * @param string $fieldName
+     * Get a sub field.
+     *
+     * @param string $queryFieldName
      * @param Database $db
-     * @return QueryBuilder
+     * @param Table $table
+     * @return Field
      */
-    public function modifyQuery(QueryBuilder $qb, string $fieldName, Database $db): QueryBuilder
-    {
-        return call_user_func($this->queryModifier, $qb, $fieldName, $db);
-    }
+    public function getSubQueryField(string $queryFieldName, Database $db, Table $table): Field;
+
+    /**
+     * Get the field label.
+     *
+     * @return string
+     */
+    public function getLabel(): string;
 }

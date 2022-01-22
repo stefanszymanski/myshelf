@@ -8,7 +8,7 @@ use LaravelZero\Framework\Commands\Command;
 
 class ShowCommand extends Command
 {
-    protected $signature = 'show {table : Table name} {key : Record key or ID}
+    protected $signature = 'show {table : Table name} {id : Record ID}
                             {--r|raw : Display the raw record data, i.e. do not resolve references}
 ';
 
@@ -25,7 +25,7 @@ class ShowCommand extends Command
     public function handle(): void
     {
         $table = $this->db->getTable($this->argument('table'));
-        $record = $table->findByKeyOrId($this->argument('key'));
+        $record = $table->store->findById($this->argument('id'));
 
         if (!$record) {
             $this->output->error('Invalid record key');
@@ -33,10 +33,9 @@ class ShowCommand extends Command
         }
 
         (new DataTable($this->output))
-            ->setFields($table->getFields())
+            ->setFields($table->getDataFields())
             ->setData($record)
             ->setDisplayIdField(true)
-            ->setDisplayKeyField(true)
             ->render();
     }
 }

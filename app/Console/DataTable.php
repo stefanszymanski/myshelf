@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\Field;
+use App\Persistence\Data\Field;
 use Symfony\Component\Console\Helper\Table as SymfonyTable;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -22,7 +22,7 @@ class DataTable
     protected ?array $newData = null;
 
     /**
-     * @var array<Field>
+     * @var array<string,Field>
      */
     protected array $fields;
 
@@ -80,7 +80,7 @@ class DataTable
      *
      * The fields in the table are rendered in the ordered as the fields are given.
      *
-     * @param array<Field> $fields
+     * @param array<string,Field> $fields
      * @return self
      */
     public function setFields(array $fields): self
@@ -98,18 +98,6 @@ class DataTable
     public function setDisplayIdField(bool $shouldDisplay): self
     {
         $this->displayIdField = $shouldDisplay;
-        return $this;
-    }
-
-    /**
-     * Set whether the Key field should be displayed.
-     *
-     * @param bool $shouldDisplay
-     * @return self
-     */
-    public function setDisplayKeyField(bool $shouldDisplay): self
-    {
-        $this->displayKeyField = $shouldDisplay;
         return $this;
     }
 
@@ -132,7 +120,7 @@ class DataTable
      */
     public function render(): void
     {
-        if (!$this->fields || !$this->data) {
+        if (!$this->fields) {
             return;
         }
 
@@ -156,26 +144,24 @@ class DataTable
      */
     protected function createDataRows(): array
     {
-        /* $rows = array_map( */
-        /*     fn (Field $field) => [$field->label, $field->valueToString($this->data[$field->name] ?? null)], */
-        /*     $this->fields */
-        /* ); */
         // Build rows for the data fields (i.e. all fields except id and key).
         $rows = [];
-        for ($i = 0; $i < sizeof($this->fields); $i++) {
-            $field = $this->fields[$i];
-            $value = $field->valueToString($this->data[$field->name] ?? null);
-            $row = [$field->label, $value];
+        $i = 0;
+        foreach ($this->fields as $fieldName => $field) {
+            $value = $field->formatValue($this->data[$fieldName] ?? null);
+            $row = [$field->getLabel(), $value];
             // Prepend a column for the field number.
             if ($this->displayFieldNumberRow) {
                 array_unshift($row, $i + 1);
             }
             // Append a column for the changed value.
             if ($this->newData) {
-                $newValue = $field->valueToString($this->newData[$field->name] ?? null);
+                $newValue = $field->formatValue($this->newData[$fieldName] ?? null);
                 $row[] = $this->formatNewValue($value, $newValue);
             }
             $rows[] = $row;
+
+            $i++;
         }
         return $rows;
     }
@@ -188,20 +174,6 @@ class DataTable
     protected function createIdRows(): array
     {
         $rows = [];
-        if ($this->displayKeyField && isset($this->data['key'])) {
-            $value = $this->data['key'] ?? null;
-            $row = ['Key', $value];
-            // Prepend a column for the field number.
-            if ($this->displayFieldNumberRow) {
-                array_unshift($row, 0);
-            }
-            // Append a column for the changed value.
-            if ($this->newData) {
-                $newValue = $this->newData['key'] ?? null;
-                $row[] = $this->formatNewValue($value, $newValue);
-            }
-            $rows[] = $row;
-        }
         if ($this->displayIdField && isset($this->data['id'])) {
             $row = ['ID', $this->data['id'] ?? null];
             if ($this->displayFieldNumberRow) {

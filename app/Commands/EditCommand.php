@@ -9,7 +9,7 @@ use LaravelZero\Framework\Commands\Command;
 
 class EditCommand extends Command
 {
-    protected $signature = 'edit {table : Table name} {key : Record key or ID}';
+    protected $signature = 'edit {table : Table name} {id : Record ID}';
 
     protected $description = 'Edit a record';
 
@@ -23,10 +23,10 @@ class EditCommand extends Command
     {
         $tableName = $this->argument('table');
         $table = $this->db->getTable($tableName);
-        $record = $table->findByKeyOrId($this->argument('key'));
+        $record = $table->store->findById($this->argument('id'));
 
         if (!$record) {
-            $this->output->error('Invalid record key or ID');
+            $this->output->error('Invalid record ID');
             return;
         }
 

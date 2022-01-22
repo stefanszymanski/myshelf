@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console;
 
+use App\Persistence\Data\Field;
+
 class EditRecordDialog extends Dialog
 {
     /**
@@ -16,11 +18,22 @@ class EditRecordDialog extends Dialog
      */
     public function render(array $record): ?array
     {
+        // Initialize data property.
+        if (!isset($record['data'])) {
+            $record['data'] = [];
+        }
+        if (!isset($record['meta'])) {
+            $record['meta'] = [];
+        }
+
         $newRecord = $record;
 
         // Add a layer that prints the record table on each update.
         $layer = $this->context->addLayer(
-            sprintf('Edit %s "%s"', $this->table->getLabel(), $record['key']),
+            __('breadcrumb.editrecord', [
+                'table' => __(sprintf('schema.%s.label', $this->table->name)),
+                'record' => $this->table->getRecordTitle($record),
+            ]),
             function () use (&$record, &$newRecord) {
                 $this->displayRecord($record, $newRecord);
             },
@@ -164,12 +177,17 @@ class EditRecordDialog extends Dialog
     protected function displayRecord(array $record, array $newRecord): void
     {
         $isExistingRecord = isset($record['id']);
+        $data = $record['data'];
+        $newData = $newRecord['data'];
+        if ($isExistingRecord) {
+            $data['id'] = $record['id'];
+            $newData['id'] = $newRecord['id'];
+        }
         (new DataTable($this->output))
-            ->setFields($this->table->getFields())
-            ->setData($isExistingRecord ? $record : $newRecord)
-            ->setNewData($isExistingRecord ? $newRecord : null)
+            ->setFields($this->table->getDataFields())
+            ->setData($isExistingRecord ? $data : $newData)
+            ->setNewData($isExistingRecord ? $newData : null)
             ->setDisplayIdField(true)
-            ->setDisplayKeyField(true)
             ->setDisplayFieldNumberColumn(true)
             ->render();
     }
@@ -183,6 +201,8 @@ class EditRecordDialog extends Dialog
     protected function persistRecord(array $record): ?array
     {
         try {
+            // TODO move setting the update date somewhere else. wrap the store with a custom class that handles such stuff.
+            $record['meta']['updated'] = time();
             $record = $this->table->store->updateOrInsert($record);
             $this->success('Record was saved');
             $success = true;
@@ -202,7 +222,7 @@ class EditRecordDialog extends Dialog
     protected function deleteRecord(array $record): bool
     {
         $deletionDialog = new DeleteRecordsDialog($this->context, $this->table);
-        $deletedRecords = $deletionDialog->render($record['key']);
+        $deletedRecords = $deletionDialog->render($record['id']);
         return !empty($deletedRecords);
     }
 
@@ -225,7 +245,7 @@ class EditRecordDialog extends Dialog
         if ($action === null) {
             return [null, null];
         }
-        $fields = $this->table->getFields();
+        $fields = $this->table->getDataFields();
         if (ctype_digit($action)) {
             $fieldNumber = $action;
             $action = 'e';
@@ -247,13 +267,10 @@ class EditRecordDialog extends Dialog
      */
     protected function editField(array $record, int $fieldNumber): array
     {
-        if ($fieldNumber === 0) {
-            $field = $this->table->getKeyField($record['id'] ?? null);
-        } else {
-            $fields = $this->table->getFields();
-            $field = $fields[$fieldNumber - 1];
-        }
-        $record[$field->name] = $field->ask($this->context, $record[$field->name] ?? null);
+        $field = $this->getFieldByNumber($fieldNumber);
+        $fieldName = $this->getFieldNameByNumber($fieldNumber);
+        // TODO localize prompt, as the prompt is part of the field asking for a value, it must go there
+        $record['data'][$fieldName] = $field->askForValue($this->context, $record['data'][$fieldName] ?? null);
         return $record;
     }
 
@@ -266,16 +283,13 @@ class EditRecordDialog extends Dialog
      */
     protected function clearField(array $record, int $fieldNumber): array
     {
-        if ($fieldNumber === 0) {
-            $this->error('The key must not be empty');
+        $field = $this->getFieldByNumber($fieldNumber);
+        $fieldName = $this->getFieldNameByNumber($fieldNumber);
+        if (!$field->validateValue($field->getEmptyValue())) {
+            // TODO localize
+            $this->error(sprintf('Field "%s" must not be empty', $fieldName));
         } else {
-            $fields = $this->table->getFields();
-            $field = $fields[$fieldNumber - 1];
-            if (!$field->validate($field->getEmptyValue())) {
-                $this->error(sprintf('Field "%s" must not be empty', $field->label));
-            } else {
-                $record[$field->name] = $field->getEmptyValue();
-            }
+            $record['data'][$fieldName] = $field->getEmptyValue();
         }
         return $record;
     }
@@ -290,18 +304,18 @@ class EditRecordDialog extends Dialog
      */
     protected function restoreField(array $record, array $originalRecord, int $fieldNumber): array
     {
-        if ($fieldNumber === 0) {
-            $field = $this->table->getKeyField($record['id'] ?? null);
-            if ($field->validate($originalRecord['key'])) {
-                $record['key'] = $originalRecord['key'];
-            } else {
-                $this->error('The key of the original record is used by another record');
-            }
-        } else {
-            $fields = $this->table->getFields();
-            $field = $fields[$fieldNumber - 1];
-            $record[$field->name] = $originalRecord[$field->name];
-        }
+        $fieldName = $this->getFieldNameByNumber($fieldNumber);
+        $record['data'][$fieldName] = $originalRecord['data'][$fieldName];
         return $record;
+    }
+
+    protected function getFieldByNumber(int $fieldNumber): Field
+    {
+        return array_values($this->table->getDataFields())[$fieldNumber - 1];
+    }
+
+    protected function getFieldNameByNumber(int $fieldNumber): string
+    {
+        return array_keys($this->table->getDataFields())[$fieldNumber - 1];
     }
 }

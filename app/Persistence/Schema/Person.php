@@ -2,9 +2,11 @@
 
 namespace App\Persistence\Schema;
 
+use App\Persistence\Data\FieldFactory as DataFieldFactory;
 use App\Persistence\Database;
-use App\Persistence\Query\FieldType as QueryFieldType;
-use SleekDB\QueryBuilder;
+use App\Persistence\Query\FieldFactory as QueryFieldFactory;
+use App\Persistence\Query\FilterFactory as QueryFilterFactory;
+use App\Persistence\Table;
 use SleekDB\Store;
 
 class Person extends AbstractSchema
@@ -12,129 +14,47 @@ class Person extends AbstractSchema
     /**
      * {@inheritDoc}
      */
-    protected array $defaultListFields = ['name'];
+    protected array $defaultListFields = ['id', 'name'];
 
     /**
      * {@inheritDoc}
      */
-    protected array $keyFields = ['firstname', 'lastname'];
-
     protected function configure(): void
     {
-        // Register data fields
-        $this
-            ->registerField('firstname', 'First name', false)
-            ->registerField('lastname', 'Last name', true)
-            ->registerField('nationality', 'Nationality', false);
+        $this->registerDataFields([
+            'firstname' => DataFieldFactory::string(label: 'First name'),
+            'lastname' => DataFieldFactory::string(label: 'Last name', required: true),
+            'nationality' => DataFieldFactory::string(label: 'Nationality'),
+        ]);
 
-        // TODO more join fields: books-as-editor, publishers, publishers-as-editor
+        $this->registerQueryFields([
+            // Data fields
+            'firstname' => QueryFieldFactory::datafield('firstname', label: 'First name'),
+            'lastname' => QueryFieldFactory::datafield('lastname', label: 'Last name'),
+            'nationality' => QueryFieldFactory::datafield('nationality', label: 'Nationality'),
+            // Joined fields
+            'name' => QueryFieldFactory::concat(', ', ['lastname', 'firstname'], label: 'Full name'),
+            'name2' => QueryFieldFactory::concat(' ', ['firstname', 'lastname'], label: 'Full name'),
+            // Person references
+            'books' => QueryFieldFactory::countReferences('book', 'authors', label: 'Books'),
+        ]);
 
-        // Real fields
-        $this
-            ->registerQueryField(
-                name: 'firstname',
-                label: 'First name',
-                type: QueryFieldType::Real,
-            )
-            ->registerQueryField(
-                name: 'lastname',
-                label: 'Last name',
-                type: QueryFieldType::Real,
-            )
-            ->registerQueryField(
-                name: 'nationality',
-                label: 'Nationality',
-                type: QueryFieldType::Real,
-            );
+        $this->registerQueryFilters([
+            // Data fields
+            'firstname' => QueryFilterFactory::forField('firstname', equal: true, like: true),
+            'lastname' => QueryFilterFactory::forField('lastname', equal: true, like: true),
+            'nationality' => QueryFilterFactory::forField('nationality', equal: true),
+            // Person references
+            'books' => QueryFilterFactory::forField('books', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true)
+        ]);
+    }
 
-        // Virtual fields made of fields from the same record
-        $this
-            ->registerQueryField(
-                name: 'name',
-                label: 'Full name',
-                type: QueryFieldType::Virtual,
-                description: 'Last name and first name concatenated: `{lastname}, {firstname}`',
-                queryModifier: function (QueryBuilder $qb, string $fieldName) {
-                    return $qb->select([$fieldName => ['CONCAT' => [', ', 'lastname', 'firstname']]]);
-                },
-            )
-            ->registerQueryField(
-                name: 'name2',
-                label: 'Full name',
-                type: QueryFieldType::Virtual,
-                description: 'First name and last name concatenated: `{firstname} {lastname}`',
-                queryModifier: function (QueryBuilder $qb, string $fieldName) {
-                    return $qb->select([$fieldName => ['CONCAT' => [' ', 'firstname', 'lastname']]]);
-                },
-            );
-
-        // Joined fields
-        $this
-            ->registerQueryField(
-                name: 'books',
-                label: 'Books',
-                type: QueryFieldType::Joined,
-                description: 'Number of books the person is an author of',
-                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
-                    $bookStore = $db->books()->store;
-                    return $qb
-                        ->join(fn ($person) => $bookStore->findBy(['authors', 'CONTAINS', $person['key']]), '_books')
-                        ->select([$fieldName => ['LENGTH' => '_books']]);
-                }
-            );
-
-        // Filters on real fields
-        $this
-            ->registerSimpleQueryFilter(
-                field: 'firstname',
-                operator: '=',
-                description: 'Exact match on first name',
-                queryModifier: fn ($value) => ['firstname', '=', $value],
-            )
-            ->registerSimpleQueryFilter(
-                field: 'firstname',
-                operator: '~',
-                description: 'Pattern match on first name',
-                queryModifier: fn ($value) => ['firstname', 'LIKE', $value],
-            )
-            ->registerSimpleQueryFilter(
-                field: 'lastname',
-                operator: '=',
-                description: 'Exact match on last name',
-                queryModifier: fn ($value) => ['lastname', '=', $value],
-            )
-            ->registerSimpleQueryFilter(
-                field: 'lastname',
-                operator: '~',
-                description: 'Pattern match on last name',
-                queryModifier: fn ($value) => ['lastname', 'LIKE', $value],
-            )
-            ->registerSimpleQueryFilter(
-                field: 'nationality',
-                operator: '=',
-                description: 'Exact match on nationality',
-                queryModifier: fn ($value) => ['nationality', '=', $value],
-            );
-
-        // Filters on number of authored books (join the book store)
-        $operators = [
-            ['=', '==', 'equal'],
-            ['<', '<', 'less'],
-            ['>', '>', 'greater'],
-            ['<=', '<=', 'less or equal'],
-            ['>=', '>=', 'greater or equal'],
-        ];
-        foreach ($operators as list($operator, $foreignOperator, $description)) {
-            $this->registerJoinedStoreQueryFilter2(
-                field: 'books',
-                operator: $operator,
-                description: "Number of books authored $description",
-                foreignStore: fn (Database $db) => $db->books()->store,
-                foreignCriteria: fn (array $person) => ['authors', 'CONTAINS', $person['key']],
-                foreignValue: fn (array $books) => count($books),
-                foreignOperator: $foreignOperator,
-            );
-        }
+    /**
+     * {@inheritDoc}
+     */
+    public function getRecordTitle(array $record, Table $table, Database $db): string
+    {
+        return trim(sprintf('%s %s', $record['data']['firstname'], $record['data']['lastname']));
     }
 
     /**
@@ -149,13 +69,13 @@ class Person extends AbstractSchema
     public function getAutocompleteOptions(Store $store): array
     {
         $records = $store->createQueryBuilder()
-            ->select(['key', 'firstname', 'lastname'])
+            ->select(['id', 'data'])
             ->getQuery()
             ->fetch();
         $options = [];
         foreach ($records as $record) {
-            $options["{$record['firstname']} {$record['lastname']}"] = $record['key'];
-            $options["{$record['lastname']}, {$record['firstname']}"] = $record['key'];
+            $options["{$record['data']['firstname']} {$record['data']['lastname']}"] = $record['id'];
+            $options["{$record['data']['lastname']}, {$record['data']['firstname']}"] = $record['id'];
         }
         return $options;
     }
@@ -177,8 +97,10 @@ class Person extends AbstractSchema
             $firstname = trim(implode(' ', $parts));
         }
         return [
-            'firstname' => $firstname,
-            'lastname' => $lastname,
+            'data' => [
+                'firstname' => $firstname,
+                'lastname' => $lastname,
+            ],
         ];
     }
 }

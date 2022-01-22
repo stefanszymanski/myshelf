@@ -5,7 +5,6 @@ namespace App\Commands;
 use App\Persistence\Database;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
-use App\Persistence\Query\FieldType as QueryFieldType;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
@@ -29,35 +28,33 @@ class DescribeCommand extends Command
         $table = $this->db->getTable($tableName);
 
         // TODO rewrite table rendering
-        $info = array_map((function (QueryField $field) {
+        $fields = $table->getQueryFields();
+        $info = array_map((function (QueryField $field, string $fieldName) {
             return [
-                'name' => $field->name,
-                'label' => $field->label,
-                'description' => $field->description,
-                'type' => $this->getFieldTypeLabel($field->type),
+                'name' => $fieldName,
+                'label' => $field->getLabel(),
             ];
-        })->bindTo($this), $table->getQueryFields());
+        })->bindTo($this), array_values($fields), array_keys($fields));
         $this->output->writeln("\n  Table fields (usable with --fields, --orderby and --groupby)");
-        $this->renderTable(['Name', 'Label', 'Description'], $info, 'type');
+        $this->renderTable(['Name', 'Label'], $info);
 
-        $this->output->writeln("\n  Filters (usable with --filter)");
-        $info = array_map(function (QueryFilter $filter) {
-            return [
-                'name' => $filter->field,
-                'operator' => $filter->operator,
-                'description' => $filter->description,
-            ];
-        }, $table->getQueryFilters());
-        usort($info, fn (array $a, array $b) => $a['name'] <=> $b['name']);
-        $this->renderTable(['Operator', 'Description'], $info, 'name');
+        // TODO implement info about query filters
+        /* $info = array_map(function (QueryFilter $filter) { */
+        /*     return [ */
+        /*         'name' => $filter->field, */
+        /*         'operator' => $filter->operator, */
+        /*     ]; */
+        /* }, $table->getQueryFilters()); */
+        /* usort($info, fn (array $a, array $b) => $a['name'] <=> $b['name']); */
+        /* $this->output->writeln("\n  Filters (usable with --filter)"); */
+        /* $this->renderTable(['Operator', 'Description'], $info, 'name'); */
     }
 
-    protected function renderTable(array $headers, array $rows, string $groupBy): void
+    protected function renderTable(array $headers, array $rows): void
     {
         $table = new Table($this->output);
         $table->setHeaders($headers);
         $table->setStyle('box');
-        $rows = $this->createGroupedTableRows($rows, $groupBy);
         $table->setRows($rows);
         $table->render();
     }

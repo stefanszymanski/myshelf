@@ -18,9 +18,9 @@ class RecordSelector extends Dialog
      *
      * @param string $question
      * @param string|null $defaultAnswer
-     * @return string|null Key of the selected record
+     * @return int|null ID of the selected record
      */
-    public function render(string $question, ?string $defaultAnswer = null): ?string
+    public function render(string $question, ?string $defaultAnswer = null): ?int
     {
         $options = $this->table->getAutocompleteOptions();
         list($exists, $value) = $this->askWithAutocompletion($question, $options, $defaultAnswer);
@@ -40,7 +40,7 @@ class RecordSelector extends Dialog
                 $defaults = $this->table->getDefaultsFromAutocompleteInput($value);
                 $dialog = new CreateRecordDialog($this->context, $this->table);
                 $record = $dialog->render($defaults);
-                $result = $record['key'] ?? null;
+                $result = $record['id'] ?? null;
             }
         }
         return $result;

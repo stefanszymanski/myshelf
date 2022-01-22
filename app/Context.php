@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace App;
 
 use App\Persistence\Database;
-use App\Persistence\Table;
 use Symfony\Component\Console\Cursor;
-use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 class Context
 {
+    protected string $tableName;
+
+    protected string $fieldName;
+
     /**
      * @var array<array{Layer,callable|null}>
      */

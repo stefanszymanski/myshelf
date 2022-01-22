@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Console;
 
 use App\Context;
-use App\Persistence\StructField;
+use App\Persistence\Data\Field;
+use App\Persistence\Data\StructField;
 
 class EditStructDialog extends Dialog
 {
     public function __construct(protected Context $context, protected StructField $field)
     {
-        $this->input = $context->input;
         $this->output = $context->output;
         $this->db = $context->db;
     }
@@ -28,7 +28,7 @@ class EditStructDialog extends Dialog
 
         // Add a layer that prints the record table on each update.
         $layer = $this->context->addLayer(
-            sprintf('Edit field "%s"', $this->field->label),
+            sprintf('Edit field "%s"', $this->field->getLabel()),
             function () use (&$struct, &$newStruct) {
                 $this->displayStruct($struct, $newStruct);
             },
@@ -141,7 +141,7 @@ class EditStructDialog extends Dialog
     protected function displayStruct(array $struct, array $newStruct): void
     {
         (new DataTable($this->output))
-            ->setFields($this->field->getFields())
+            ->setFields($this->field->getSubFields())
             ->setData($struct)
             ->setNewData($newStruct)
             ->setDisplayFieldNumberColumn(true)
@@ -165,7 +165,6 @@ class EditStructDialog extends Dialog
         if ($action === null) {
             return [null, null];
         }
-        $fields = $this->field->getFields();
         if (ctype_digit($action)) {
             $fieldNumber = $action;
             $action = 'e';
@@ -173,6 +172,7 @@ class EditStructDialog extends Dialog
             $fieldNumber = substr($action, 1);
             $action = substr($action, 0, 1);
         }
+        $fields = $this->field->getSubFields();
         return !ctype_digit($fieldNumber) || (int) $fieldNumber < 1 || (int) $fieldNumber > sizeof($fields)
             ? [null, null]
             : [$action, (int) $fieldNumber];
@@ -187,9 +187,9 @@ class EditStructDialog extends Dialog
      */
     protected function editField(array $struct, int $fieldNumber): array
     {
-        $fields = $this->field->getFields();
-        $field = $fields[$fieldNumber - 1];
-        $struct[$field->name] = $field->ask($this->context, $struct[$field->name] ?? null);
+        $field = $this->getFieldByNumber($fieldNumber);
+        $fieldName = $this->getFieldNameByNumber($fieldNumber);
+        $struct[$fieldName] = $field->askForValue($this->context, $struct[$fieldName] ?? null);
         return $struct;
     }
 
@@ -202,12 +202,12 @@ class EditStructDialog extends Dialog
      */
     protected function clearField(array $struct, int $fieldNumber): array
     {
-        $fields = $this->field->getFields();
-        $field = $fields[$fieldNumber - 1];
-        if (!$field->validate($field->getEmptyValue())) {
-            $this->error(sprintf('Field "%s" must not be empty', $field->label));
+        $field = $this->getFieldByNumber($fieldNumber);
+        $fieldName = $this->getFieldNameByNumber($fieldNumber);
+        if (!$field->validateValue($field->getEmptyValue())) {
+            $this->error(sprintf('Field "%s" must not be empty', $field->getLabel()));
         } else {
-            $struct[$field->name] = $field->getEmptyValue();
+            $struct[$fieldName] = $field->getEmptyValue();
         }
         return $struct;
     }
@@ -222,9 +222,18 @@ class EditStructDialog extends Dialog
      */
     protected function restoreField(array $struct, array $originalStruct, int $fieldNumber): array
     {
-        $fields = $this->field->getFields();
-        $field = $fields[$fieldNumber - 1];
-        $struct[$field->name] = $originalStruct[$field->name];
+        $fieldName = $this->getFieldNameByNumber($fieldNumber);
+        $struct[$fieldName] = $originalStruct[$fieldName];
         return $struct;
+    }
+
+    protected function getFieldByNumber(int $fieldNumber): Field
+    {
+        return array_values($this->field->getSubFields())[$fieldNumber - 1];
+    }
+
+    protected function getFieldNameByNumber(int $fieldNumber): string
+    {
+        return array_keys($this->field->getSubFields())[$fieldNumber - 1];
     }
 }

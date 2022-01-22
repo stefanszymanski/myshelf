@@ -2,82 +2,60 @@
 
 namespace App\Persistence\Schema;
 
-use App\Persistence\Database;
-use App\Persistence\Query\FieldType as QueryFieldType;
-use SleekDB\QueryBuilder;
+use App\Persistence\Data\FieldFactory as DataFieldFactory;
+use App\Persistence\Query\FieldFactory as QueryFieldFactory;
+use App\Persistence\Query\FilterFactory as QueryFilterFactory;
 use SleekDB\Store;
 
 class Publisher extends AbstractSchema
 {
-    protected array $keyFields = ['name'];
+    /**
+     * {@inheritDoc}
+     */
+    protected array $recordTitleFields = ['shortname', 'name'];
+
+    /**
+     * {@inheritDoc}
+     */
+    protected array $defaultListFields = ['id', 'name'];
+
+    /**
+     * {@inheritDoc}
+     */
+    protected array $newRecordDialogFields = ['name', 'shortname'];
 
     protected function configure(): void
     {
-        $this
-            ->registerField(
-                name: 'name',
-                label: 'Full name',
-                required: true
-            )
-            ->registerField(
-                name: 'shortname',
-                label: 'Short name',
-            );
+        $this->registerDataFields([
+            'name' => DataFieldFactory::string(label: 'Name', required: true),
+            'shortname' => DataFieldFactory::string(label: 'Short name')
+        ]);
 
-        $this
-            ->registerQueryField(
-                name: 'name',
-                label: 'Name',
-                type: QueryFieldType::Real,
-            )
-            ->registerQueryField(
-                name: 'books',
-                label: 'Books',
-                description: 'Number of books',
-                type: QueryFieldType::Joined,
-                queryModifier: function (QueryBuilder $qb, string $fieldName, Database $db) {
-                    $bookStore = $db->books()->store;
-                    return $qb
-                        ->join(fn ($publisher) => $bookStore->findBy(['publisher', '=', $publisher['key']]), '_books')
-                        ->select([$fieldName => ['LENGTH' => '_books']]);
-                }
-            );
+        $this->registerQueryFields([
+            'name' => QueryFieldFactory::datafield('name', label: 'Name'),
+            'shortname' => QueryFieldFactory::datafield('shortname', label: 'Short name'),
+            'books' => QueryFieldFactory::countReferences('book', 'publisher', label: 'Books'),
+        ]);
 
-        $this
-            ->registerSimpleQueryFilter(
-                field: 'name',
-                operator: '=',
-                description: 'Exact match on name',
-                queryModifier: fn ($value) => ['name', '=', $value],
-            )
-            ->registerSimpleQueryFilter(
-                field: 'name',
-                operator: '~',
-                description: 'Pattern match on name',
-                queryModifier: fn ($value) => ['name', 'LIKE', $value],
-            );
+        $this->registerQueryFilters([
+            'name' => QueryFilterFactory::forField('name', equal: true, like: true),
+            'shortname' => QueryFilterFactory::forField('shortname', equal: true, like: true),
+            'books' => QueryFilterFactory::forField('books', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
+        ]);
     }
 
     /**
      * {@inheritDoc}
      */
-    public function getDefaultListFields(): array
-    {
-        return ['name'];
-    }
-
-    /**
-     * Build autocomplete options.
-     */
     public function getAutocompleteOptions(Store $store): array
     {
         $records = $store->createQueryBuilder()
-            ->select(['key', 'name'])
+            ->select(['id', 'data.name'])
             ->getQuery()
             ->fetch();
         $options = [];
         foreach ($records as $record) {
-            $options[$record['name']] = $record['key'];
+            $options[$record['data']['name']] = $record['id'];
         }
         return $options;
     }
@@ -88,7 +66,9 @@ class Publisher extends AbstractSchema
     public function getDefaultsFromAutocompleteInput(string $value): array
     {
         return [
-            'name' => $value,
+            'data' => [
+                'name' => $value,
+            ],
         ];
     }
 }

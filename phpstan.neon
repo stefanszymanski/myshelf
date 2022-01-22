@@ -1,4 +1,7 @@
 parameters:
-	level: 6
-	paths:
-		- app
+    level: 6
+    paths:
+        - app
+    typeAliases:
+        record: 'array<string,mixed>'
+        sleekdb-select: 'array{string,string,mixed} | \Closure(record): bool | array<string,mixed>'

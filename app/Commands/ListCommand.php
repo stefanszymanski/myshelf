@@ -18,6 +18,7 @@ class ListCommand extends Command
                             {--groupby= : Field name to group by}
                             {--filter=* : Filter expression: <field><operator><value>}
                             {--format=table : Valid formats are: table, csv, json}
+                            {--count : Only print the number of records}
     ';
 
     protected $description = 'List records';
@@ -77,7 +78,7 @@ class ListCommand extends Command
         // Filters
         $filters = [];
         foreach ($this->option('filter') as $filter) {
-            if (preg_match('/^([a-z0-9.-]+)([~=<>!?]+)(.*)$/', $filter, $matches)) {
+            if (preg_match('/^([a-z0-9.-]+)([~=<>!?#]+)(.*)$/', $filter, $matches)) {
                 array_shift($matches);
                 $filters[] = $matches;
             }
@@ -85,9 +86,18 @@ class ListCommand extends Command
 
         $records = $this->table->find($fields, $orderBy, $filters, $exceptFields);
         $records = array_map(Arr::dot(...), $records);
-        $headers = $this->table->getQueryFieldLabels(array_diff($fields, $hiddenFields));
+        $headers = array_map(
+            fn ($fieldName) => $this->table->getQueryField($fieldName)->getLabel(),
+            array_diff($fields, $hiddenFields)
+        );
 
-        $this->renderTable($headers, $records, $hiddenFields, $groupBy);
+        if ($this->option('count')) {
+            $this->output->writeln((string) count($records));
+        } else {
+            $records = array_map(Arr::dot(...), $records);
+            $headers = $this->table->getQueryFieldLabels(array_diff($fields, $hiddenFields));
+            $this->renderTable($headers, $records, $hiddenFields, $groupBy);
+        }
     }
 
     /**

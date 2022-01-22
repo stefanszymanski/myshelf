@@ -1,5 +1,7 @@
 <?php
 
+use LaravelZero\Framework\Providers\NullLogger\NullLoggerServiceProvider;
+
 return [
 
     /*
@@ -42,6 +44,8 @@ return [
 
     'env' => 'development',
 
+    'locale' => 'en',
+
     /*
     |--------------------------------------------------------------------------
     | Autoloaded Service Providers
@@ -55,6 +59,7 @@ return [
 
     'providers' => [
         App\Providers\AppServiceProvider::class,
+        \Illuminate\Translation\TranslationServiceProvider::class,
     ],
 
 ];

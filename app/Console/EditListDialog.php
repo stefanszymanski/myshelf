@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace App\Console;
 
-use App\Persistence\ListField;
+use App\Context;
+use App\Persistence\Data\ListField;
 use App\Validator\IntegerValidator;
 
 class EditListDialog extends Dialog
 {
     protected ListField $field;
+
+    public function __construct(protected Context $context)
+    {
+        $this->output = $context->output;
+        $this->db = $context->db;
+    }
 
     /**
      * Render a list edit dialog.
@@ -24,7 +31,7 @@ class EditListDialog extends Dialog
 
         // Add a layer that prints the elements list on each update.
         $layer = $this->context->addLayer(
-            sprintf('Edit list "%s"', $this->field->label),
+            sprintf('Edit list "%s"', $this->field->getLabel()),
             function() use (&$elements) {
                 $this->displayList($elements);
             },
@@ -173,7 +180,10 @@ class EditListDialog extends Dialog
                 $old !== $new => '<fg=red>%1$s</> <fg=green>%2$s</>',
                 default => throw new \UnexpectedValueException('This should not happen'),
             };
-            $rows[] = [$i + 1, sprintf($format, $old, $new)];
+            $rows[] = [
+                $i + 1,
+                sprintf($format, $this->field->formatValue($old), $this->field->formatValue($new))
+            ];
         }
         $this->output->table(['#', 'Values'], $rows);
     }
@@ -214,7 +224,7 @@ class EditListDialog extends Dialog
      */
     protected function addToList(array $list): array
     {
-        $newValue = $this->field->type->ask($this->context);
+        $newValue = $this->field->field->askForValue($this->context, null);
         if ($newValue) {
             if (!in_array($newValue, array_column($list, 1))) {
                 if (in_array($newValue, array_column($list, 0))) {
@@ -270,7 +280,7 @@ class EditListDialog extends Dialog
      */
     protected function editElement(array $list, int $elementNumber): array
     {
-        $newValue = $this->field->type->ask($this->context, $list[$elementNumber][1]);
+        $newValue = $this->field->field->askForValue($this->context, $list[$elementNumber][1]);
         if (!$newValue) {
             $this->warning('Nothing was selected, selection was dismissed');
         } else {

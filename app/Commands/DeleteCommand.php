@@ -9,11 +9,10 @@ use LaravelZero\Framework\Commands\Command;
 
 class DeleteCommand extends Command
 {
-    protected $signature = 'rm {table : Table name} {key?* : Record key or ID}
+    protected $signature = 'rm {table : Table name} {id?* : Record ID}
                             {--f|filter=* : Filter expression: <field><operator><value>}
                             {--d|delete-records : Delete referring records without confirmation}
                             {--r|derefer-records : Remove references from referring records}
-                            {--i|ignore-invalid-keys : Do not abort due to invalid keys}
                             {--s|no-summary : Do not display a summary of referring records}
     ';
 
@@ -34,7 +33,7 @@ class DeleteCommand extends Command
         $table = $this->db->getTable($tableName);
 
         $context = new Context($this->input, $this->output, $this->db);
-        (new DeleteRecordsDialog($context, $table))->render(...$this->argument('key'));
+        (new DeleteRecordsDialog($context, $table))->render(...$this->argument('id'));
         $context->flush();
 
         //      Respect the arguments --delete-records and --derefer-records
@@ -42,14 +41,14 @@ class DeleteCommand extends Command
 
     protected function validateArguments(): bool
     {
-        $keys = $this->argument('key');
+        $ids = $this->argument('id');
         $filters = $this->option('filter');
-        if (!empty($keys) && !empty($filters)) {
-            $this->output->error('Argument --filter can not be used in conjunction with keys');
+        if (!empty($ids) && !empty($filters)) {
+            $this->output->error('Argument --filter can not be used in conjunction with IDs');
             return false;
         }
-        if (empty($keys) && empty($filters)) {
-            $this->output->error('At least on key or --filter must be provided');
+        if (empty($ids) && empty($filters)) {
+            $this->output->error('At least one ID or --filter must be provided');
             return false;
         }
         return true;

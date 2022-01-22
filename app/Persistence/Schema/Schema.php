@@ -2,40 +2,45 @@
 
 namespace App\Persistence\Schema;
 
-use App\Persistence\Field;
+use App\Persistence\Data\Field as DataField;
+use App\Persistence\Database;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
+use App\Persistence\Table;
 use SleekDB\Store;
 
 interface Schema
 {
     /**
-     * Get the label of the schema/table.
+     * Get data fields.
      *
-     * @return string
+     * @return array<string, DataField>
      */
-    public function getLabel(): string;
+    public function getDataFields(): array;
 
     /**
-     * Get fields.
+     * Get query fields.
      *
-     * @return array<Field>
-     */
-    public function getFields(): array;
-
-    /**
-     * Get all fields.
-     *
-     * @return array<QueryField>
+     * @return array<string,QueryField>
      */
     public function getQueryFields(): array;
 
     /**
-     * Get all filters.
+     * Get query filters.
      *
-     * @return array<string,array<string,QueryFilter>>
+     * @return array<string,QueryFilter>
      */
     public function getQueryFilters(): array;
+
+    /**
+     * Get a query filter.
+     *
+     * @param string $fieldName
+     * @param string $operator
+     * @return QueryFilter
+     * @throws \InvalidArgumentException if there is no filter for `$fieldName` and `$operator`.
+     */
+    public function getQueryFilter(string $fieldName, string $operator): QueryFilter;
 
     /**
      * Get a default list of fields to use in the list view.
@@ -43,6 +48,23 @@ interface Schema
      * @return array<string> List of field names
      */
     public function getDefaultListFields(): array;
+
+    /**
+     * Get names of data fields to ask for in the New Record Dialog.
+     *
+     * @return array<string>
+     */
+    public function getNewRecordDialogFieldNames(): array;
+
+    /**
+     * Get the title for a record.
+     *
+     * @param record $record
+     * @param Table $table
+     * @param Database $database
+     * @return string
+     */
+    public function getRecordTitle(array $record, Table $table, Database $db): string;
 
     /**
      * Get autocomplete options for a record selection dialog.
@@ -56,15 +78,7 @@ interface Schema
      * Parse the user input from record selection dialog into record default values.
      *
      * @param string $value
-     * @return array<string,mixed>
+     * @return record
      */
     public function getDefaultsFromAutocompleteInput(string $value): array;
-
-    /**
-     * Create a default record key from record fields.
-     *
-     * @param array<string,mixed> $record
-     * @return string A record key
-     */
-    public function createKeyForRecord(array $record): string;
 }
