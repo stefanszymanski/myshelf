@@ -24,7 +24,6 @@ class Work extends AbstractSchema
     protected function configure(): void
     {
         $this->registerDataFields([
-            // General information
             'title' => DataFieldFactory::string(label: 'Title', required: true),
             'language' => DataFieldFactory::select(Book::LANGUAGES, label: 'Language'),
             'orig_language' => DataFieldFactory::select(Book::ORIGINAL_LANGUAGES, label: 'Original Language'),
@@ -53,7 +52,6 @@ class Work extends AbstractSchema
         ]);
 
         $this->registerQueryFields([
-            // General information
             'title' => QueryFieldFactory::forDatafield('title', label: 'Title'),
             'language' => QueryFieldFactory::forDatafield('language', label: 'Language'),
             'origlanguage' => QueryFieldFactory::forDatafield('orig_language', label: 'Original Language'),
@@ -61,18 +59,19 @@ class Work extends AbstractSchema
             'authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
             'translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
             'published' => QueryFieldFactory::forDatafield('published', label: 'Published'),
-            'publisher' => QueryFieldFactory::forDatafield('published.publisher', label: 'Publisher'),
             'published.date' => QueryFieldFactory::forDatafield('published.date', label: 'Publishing Date'),
             'published.publisher' => QueryFieldFactory::forDatafield('published.publisher', label: 'Publisher'),
             'published.place' => QueryFieldFactory::forDatafield('published.place', label: 'Publishing place'),
+            'publisher' => QueryFieldFactory::forDatafield('published.publisher', label: 'Publisher'),
         ]);
 
         $this->registerQueryFilters([
-            // Simple data fields
             'title' => QueryFilterFactory::forField('title', equal: true, unequal: true, like: true),
             'language' => QueryFilterFactory::forField('language', equal: true, unequal: true, like: true),
             'origlanguage' => QueryFilterFactory::forField('origlanguage', equal: true, unequal: true, like: true),
-            'published' => QueryFilterFactory::forField('published', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
+            'published.date' => QueryFilterFactory::forField('published', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
+            'published.publisher' => QueryFilterFactory::forReference('published.publisher', 'publisher'),
+            'published.place' => QueryFilterFactory::forField('published.place', equal: true, unequal: true, like: true),
             'author' => QueryFilterFactory::forReference('persons.authors', 'person', isMultivalue: true),
             'translator' => QueryFilterFactory::forReference('persons.translators', 'person', isMultivalue: true),
         ]);

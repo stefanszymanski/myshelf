@@ -24,6 +24,12 @@ class Book extends AbstractSchema
         'used' => 'Used',
     ];
 
+    protected const EDITIONS = [
+        'first' => 'First',
+        'revised' => 'Revised',
+        'updated' => 'Revised and updated',
+    ];
+
     public const LANGUAGES = [
         'de' => 'German',
         'en' => 'English',
@@ -65,7 +71,7 @@ class Book extends AbstractSchema
             // General information
             'title' => DataFieldFactory::string(label: 'Title', required: true),
             'language' => DataFieldFactory::select(self::LANGUAGES, label: 'Language'),
-            'orig_language' => DataFieldFactory::select(self::ORIGINAL_LANGUAGES, label: 'Original Language'),
+            'origlanguage' => DataFieldFactory::select(self::ORIGINAL_LANGUAGES, label: 'Original Language'),
             'persons' => DataFieldFactory::struct(
                 label: 'Persons',
                 fields: [
@@ -95,7 +101,8 @@ class Book extends AbstractSchema
             'content' => DataFieldFactory::references('work', label: 'Content', sortable: true),
             // Information about a specific edition
             'binding' => DataFieldFactory::select(self::BINDINGS, label: 'Binding', required: true),
-            'printrun' => DataFieldFactory::integer(label: 'Print run'),
+            'edition' => DataFieldFactory::select(self::EDITIONS, label: 'Edition'),
+            'printing' => DataFieldFactory::integer(label: 'Printing'),
             // Information about a specific copy
             'condition' => DataFieldFactory::select(self::CONDITIONS, label: 'Condition'),
             'acquired' => DataFieldFactory::struct(
@@ -112,6 +119,7 @@ class Book extends AbstractSchema
             // General information
             'title' => QueryFieldFactory::forDatafield('title', label: 'Title'),
             'language' => QueryFieldFactory::forDatafield('language', label: 'Language'),
+            'origlanguage' => QueryFieldFactory::forDatafield('origlanguage', label: 'Original Language'),
             'authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
             'translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
             'illustrators' => QueryFieldFactory::forDatafield('persons.illustrators', label: 'Illustrators'),
@@ -122,7 +130,7 @@ class Book extends AbstractSchema
             'publisher' => QueryFieldFactory::forDatafield('published.publisher', label: 'Publisher'),
             'published.date' => QueryFieldFactory::forDatafield('published.date', label: 'Publishing Date'),
             'published.publisher' => QueryFieldFactory::forDatafield('published.publisher', label: 'Publisher'),
-            'published.place' => QueryFieldFactory::forDatafield('published.place', label: 'Publishing place'),
+            'published.place' => QueryFieldFactory::forDatafield('published.place', label: 'Publishing Place'),
             'isbn10' => QueryFieldFactory::forDatafield('isbn10', label: 'ISBN-10'),
             'isbn13' => QueryFieldFactory::forDatafield('isbn13', label: 'ISBN-13'),
             'content' => QueryFieldFactory::forDatafield('content', label: 'Content'),
@@ -130,29 +138,39 @@ class Book extends AbstractSchema
             // Information about a specific edition
             'binding' => QueryFieldFactory::forDatafield('binding', label: 'Binding'),
             'edition' => QueryFieldFactory::forDatafield('edition', label: 'Edition'),
-            'printrun' => QueryFieldFactory::forDatafield('printrun', label: 'Print-run'),
+            'printing' => QueryFieldFactory::forDatafield('printing', label: 'Printing'),
             // Information about a specific copy
             'condition' => QueryFieldFactory::forDatafield('condition', label: 'Condition'),
-            // TODO add query field: combined info of acquired fields
-            'acquired.at' => QueryFieldFactory::forDatafield('acquired.at', label: 'Acquired at'),
-            'acquired.from' => QueryFieldFactory::forDatafield('acquired.from', label: 'Acquired from'),
-            'acquired.as' => QueryFieldFactory::forDatafield('acquired.as', label: 'Acquired as'),
+            'acquired' => QueryFieldFactory::forDatafield('acquired', label: 'Acquired'),
+            'acquired.date' => QueryFieldFactory::forDatafield('acquired.date', label: 'Acquired at'),
+            'acquired.source' => QueryFieldFactory::forDatafield('acquired.source', label: 'Acquired from'),
+            'acquired.condition' => QueryFieldFactory::forDatafield('acquired.condition', label: 'Acquired as'),
         ]);
 
         $this->registerQueryFilters([
-            // Simple data fields
+            // General information
             'title' => QueryFilterFactory::forField('title', equal: true, unequal: true, like: true),
             'language' => QueryFilterFactory::forField('language', equal: true, unequal: true, like: true),
             'origlanguage' => QueryFilterFactory::forField('origlanguage', equal: true, unequal: true, like: true),
+            'author' => QueryFilterFactory::forReference('persons.authors', 'person', isMultivalue: true),
+            'translator' => QueryFilterFactory::forReference('persons.translators', 'person', isMultivalue: true),
+            'illustrator' => QueryFilterFactory::forReference('persons.illustrators', 'person', isMultivalue: true),
+            'editor' => QueryFilterFactory::forReference('persons.editors', 'person', isMultivalue: true),
+            'published.date' => QueryFilterFactory::forField('published.date', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
+            'published.publisher' => QueryFilterFactory::forReference('published.publisher', 'publisher'),
+            'published.place' => QueryFilterFactory::forField('published.place', equal: true, unequal: true, like: true),
+            'isbn10' => QueryFilterFactory::forField('isbn10', equal: true, unequal: true, like: true),
+            'isbn13' => QueryFilterFactory::forField('isbn13', equal: true, unequal: true, like: true),
+            'content' => QueryFilterFactory::forReference('content', 'work', isMultivalue: true),
+            // Information about a specific edition
             'binding' => QueryFilterFactory::forField('binding', equal: true, unequal: true, like: true),
-            'published' => QueryFilterFactory::forField('published', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
-            'isbn' => QueryFilterFactory::forField('isbn', equal: true, unequal: true, like: true),
-            'acquired.at' => QueryFilterFactory::forField('acquired.at', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
-            'acquired.from' => QueryFilterFactory::forField('acquired.from', equal: true, unequal: true, like: true),
-            'acquired.as' => QueryFilterFactory::forField('acquired.as', equal: true, unequal: true, like: true),
-            // Reference data fields
-            'author' => QueryFilterFactory::forReference('authors', 'person', isMultivalue: true),
-            'editor' => QueryFilterFactory::forReference('editors', 'person', isMultivalue: true),
+            'edition' => QueryFilterFactory::forField('edition', equal: true, unequal: true, like: true),
+            'printing' => QueryFilterFactory::forField('printing', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
+            // Information about a specific copy
+            'condition' => QueryFilterFactory::forField('condition', equal: true, unequal: true, like: true),
+            'acquired.date' => QueryFilterFactory::forField('acquired.date', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
+            'acquired.source' => QueryFilterFactory::forField('acquired.source', equal: true, unequal: true, like: true),
+            'acquired.condition' => QueryFilterFactory::forField('acquired.condition', equal: true, unequal: true, like: true),
         ]);
     }
 
