@@ -6,6 +6,7 @@ namespace App\Persistence\Query;
 
 use App\Persistence\Database;
 use App\Persistence\Table;
+use SleekDB\Classes\ConditionsHandler;
 use SleekDB\QueryBuilder;
 
 class FieldFilter implements Filter
@@ -51,6 +52,6 @@ class FieldFilter implements Filter
         if (in_array($sleekDbOperator, ['IN', 'NOT IN']) && !is_array($filterValue)) {
             $filterValue = explode(',', $filterValue);
         }
-        return $qb->having([$this->fieldName, $sleekDbOperator, $filterValue]);
+        return $qb->having([fn($record) => ConditionsHandler::verifyCondition($sleekDbOperator, $record[$this->fieldName], $filterValue)]);
     }
 }

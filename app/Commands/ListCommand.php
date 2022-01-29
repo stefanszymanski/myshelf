@@ -101,7 +101,7 @@ class ListCommand extends Command
         // Filters
         $filters = [];
         foreach ($this->option('filter') as $filter) {
-            if (preg_match('/^([a-z0-9.-]+)([~=<>!?#]+)(.*)$/', $filter, $matches)) {
+            if (preg_match('/^([a-z0-9.:-]+)([~=<>!?#]+)(.*)$/', $filter, $matches)) {
                 array_shift($matches);
                 $filters[] = $matches;
             }

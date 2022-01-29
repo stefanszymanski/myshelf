@@ -6,6 +6,7 @@ namespace App\Persistence\Query;
 
 use App\Persistence\Database;
 use App\Persistence\Table;
+use Illuminate\Support\Arr;
 use SleekDB\QueryBuilder;
 
 class ReferenceFilter implements Filter
@@ -27,10 +28,10 @@ class ReferenceFilter implements Filter
      */
     public function canHandle(string $filterName, string $filterOperator, Database $db): bool
     {
+        // TODO refactor
         try {
-            $foreignFilterName = explode('.', $filterName, 2)[1] ?? null;
-            return
-                (!$foreignFilterName && in_array($filterOperator, ['=', '#']))
+            $foreignFilterName = explode(':', $filterName, 2)[1] ?? null;
+            return (!$foreignFilterName && in_array($filterOperator, ['=', '#']))
                 ||
                 $db->getTable($this->tableName)->findQueryFilter($foreignFilterName, $filterOperator);
         } catch (\Exception $e) {
@@ -50,7 +51,7 @@ class ReferenceFilter implements Filter
         Table $table
     ): QueryBuilder {
         // Keep only the part after the first dot.
-        $foreignFilterName = explode('.', $filterName, 2)[1] ?? null;
+        $foreignFilterName = explode(':', $filterName, 2)[1] ?? null;
         // Determine IDs of foreign records.
         if ($foreignFilterName) {
             // If there is a foreign filter name, find for foreign records.
@@ -66,13 +67,13 @@ class ReferenceFilter implements Filter
         // Filter the records: they must contain a reference to the previously found foreign records.
         if ($this->isMultivalue) {
             $qb->where([
-                fn ($record) =>
-                isset($record[$this->fieldName]) &&
-                    is_array($record[$this->fieldName]) &&
-                    !empty(array_intersect($record[$this->fieldName], $foreignIds))
+                fn ($record) => !empty(array_intersect(
+                    Arr::get($record['data'], $this->fieldName, []),
+                    $foreignIds
+                ))
             ]);
         } else {
-            $qb->where([$this->fieldName, 'IN', $foreignIds]);
+            $qb->where(['data.' . $this->fieldName, 'IN', $foreignIds]);
         }
         return $qb;
     }
