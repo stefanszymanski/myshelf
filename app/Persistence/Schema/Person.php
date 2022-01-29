@@ -36,7 +36,7 @@ class Person extends AbstractSchema
             'name' => QueryFieldFactory::concat(', ', ['lastname', 'firstname'], label: 'Full name'),
             'name2' => QueryFieldFactory::concat(' ', ['firstname', 'lastname'], label: 'Full name'),
             // Person references
-            'books' => QueryFieldFactory::countReferences('book', 'authors', label: 'Books'),
+            'books' => QueryFieldFactory::countReferences('book', 'persons.authors', label: 'Books'),
         ]);
 
         $this->registerQueryFilters([
