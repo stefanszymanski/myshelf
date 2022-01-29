@@ -10,7 +10,8 @@ use App\Persistence\Data\ReferenceField;
 use App\Persistence\Data\SelectField;
 use App\Validator\ConjunctionValidator;
 use App\Validator\IntegerValidator;
-use App\Validator\IsbnValidator;
+use App\Validator\Isbn10Validator;
+use App\Validator\Isbn13Validator;
 use App\Validator\LooseDateValidator;
 use App\Validator\NotEmptyValidator;
 use App\Validator\NullValidator;
@@ -43,23 +44,39 @@ class FieldFactory
     {
         $integerValidator = new IntegerValidator($minimum, $maximum);
         $validator = $required
-            ? new ConjunctionValidator(new NotEmptyValidator, $integerValidator)
+            ? new ConjunctionValidator([new NotEmptyValidator, $integerValidator])
             : $integerValidator;
         return new InputField($validator, $label);
     }
 
     /**
-     * Create an input field for an ISBN.
+     * Create an input field for an ISBN-10.
      *
      * @param string $label
      * @param bool $required
      * @return Field
      */
-    public static function isbn(string $label, bool $required = false): Field
+    public static function isbn10(string $label, bool $required = false): Field
     {
-        $isbnValidator = new IsbnValidator;
+        $isbnValidator = new Isbn10Validator;
         $validator = $required
-            ? new ConjunctionValidator(new NotEmptyValidator, $isbnValidator)
+            ? new ConjunctionValidator([new NotEmptyValidator, $isbnValidator])
+            : $isbnValidator;
+        return new InputField($validator, $label);
+    }
+
+    /**
+     * Create an input field for an ISBN-13.
+     *
+     * @param string $label
+     * @param bool $required
+     * @return Field
+     */
+    public static function isbn13(string $label, bool $required = false): Field
+    {
+        $isbnValidator = new Isbn13Validator;
+        $validator = $required
+            ? new ConjunctionValidator([new NotEmptyValidator, $isbnValidator])
             : $isbnValidator;
         return new InputField($validator, $label);
     }
