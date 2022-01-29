@@ -6,7 +6,10 @@ namespace App\Validator;
 
 class ConjunctionValidator implements Validator
 {
-    public function __construct(protected callable ...$validators)
+    /**
+     * @param array<Validator> $validators
+     */
+    public function __construct(protected readonly array $validators)
     {
     }
 
@@ -21,7 +24,7 @@ class ConjunctionValidator implements Validator
     {
         return array_reduce(
             $this->validators,
-            fn (mixed $carry, callable $validator) => call_user_func($validator, $carry),
+            fn (mixed $carry, Validator $validator) => $validator->validate($carry),
             $value
         );
     }

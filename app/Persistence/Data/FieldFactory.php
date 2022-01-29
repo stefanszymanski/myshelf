@@ -92,7 +92,7 @@ class FieldFactory
     {
         $looseDateValidator = new LooseDateValidator;
         $validator = $required
-            ? new ConjunctionValidator(new NotEmptyValidator, $looseDateValidator)
+            ? new ConjunctionValidator([new NotEmptyValidator, $looseDateValidator])
             : $looseDateValidator;
         return new InputField($validator, $label);
     }
