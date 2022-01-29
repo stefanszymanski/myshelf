@@ -17,6 +17,9 @@ class ListCommand extends Command
                             {--orderby= : Field names to order by, separated by comma, may be prefixed with a ! for descending sorting}
                             {--groupby= : Field name to group by}
                             {--filter=* : Filter expression: <field><operator><value>}
+                            {--limit=100 : Number of results to display}
+                            {--page= : Page number of results to display, cannot be used with --offset}
+                            {--offset= : Number of results to skip, cannot be used with --page}
                             {--format=table : Valid formats are: table, csv, json}
                             {--count : Only print the number of records}
     ';
@@ -42,6 +45,9 @@ class ListCommand extends Command
         $fields = $this->getFields();
         $orderBy = $this->getOrderBy();
         $groupBy = $this->option('groupby');
+        $limit = $this->option('limit');
+        $page = $this->option('page');
+        $offset = $this->option('offset');
 
         // TODO move argument validation to an earlier point in the command dispatching process, if possible
         // Validate arguments --fields, --orderby and --groupby
@@ -58,6 +64,23 @@ class ListCommand extends Command
             $this->error(sprintf('Argument --groupby is not a valid field name'));
             $error = true;
         }
+        if ($limit < 1) {
+            $this->error('Argument --limit must be an integer greater 0');
+            $error = true;
+        }
+        if ($page !== null && $page < 1) {
+            $this->error('Argument --page must be an integer greater 0');
+            $error = true;
+        }
+        if ($offset !== null && $offset < 0) {
+            $this->error('Argument --offset must be an integer greater or equal 0');
+            $error = true;
+        }
+        if ($offset !== null && $page !== null) {
+            $this->error('Arguments --offset and --page cannot be used together');
+            $error = true;
+        }
+
         if ($error) {
             return;
         }
@@ -84,12 +107,13 @@ class ListCommand extends Command
             }
         }
 
-        $records = $this->table->find($fields, $orderBy, $filters, $exceptFields);
-        $records = array_map(Arr::dot(...), $records);
-        $headers = array_map(
-            fn ($fieldName) => $this->table->getQueryField($fieldName)->getLabel(),
-            array_diff($fields, $hiddenFields)
-        );
+        $limit = (int) $limit;
+        $offset = match (true) {
+            !$offset && !$page => 0,
+            $offset !== null => (int) $offset,
+            default => $limit * ((int) $page - 1),
+        };
+        $records = $this->table->find($fields, $orderBy, $filters, $exceptFields, $limit, $offset);
 
         if ($this->option('count')) {
             $this->output->writeln((string) count($records));

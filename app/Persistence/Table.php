@@ -235,9 +235,11 @@ class Table
      * @param array<string,string> $orderBy
      * @param array<array{string,string,mixed}> $filters
      * @param array<string> $excludeFields
-     * @return array<array<string,mixed>>>
+     * @param int $limit
+     * @param int $offset
+     * @return array<record>
      */
-    public function find(array $fields, array $orderBy = [], array $filters = [], array $excludeFields = []): array
+    public function find(array $fields, array $orderBy = [], array $filters = [], array $excludeFields = [], int $limit = 100, int $offset = 0): array
     {
         $qb = $this->store->createQueryBuilder();
         $qb->except($excludeFields);
