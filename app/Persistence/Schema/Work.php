@@ -56,6 +56,8 @@ class Work extends AbstractSchema
             'language' => QueryFieldFactory::forDatafield('language', label: 'Language'),
             'origlanguage' => QueryFieldFactory::forDatafield('orig_language', label: 'Original Language'),
             'persons' => QueryFieldFactory::forDatafield('persons', label: 'Persons'),
+            'persons.authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
+            'persons.translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
             'authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
             'translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
             'published' => QueryFieldFactory::forDatafield('published', label: 'Published'),

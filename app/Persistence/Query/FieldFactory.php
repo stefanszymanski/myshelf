@@ -7,7 +7,7 @@ namespace App\Persistence\Query;
 class FieldFactory
 {
     /**
-     * Select a data field.
+     * Select the value from a data field.
      *
      * @param string $fieldName
      * @param string $label
@@ -16,6 +16,18 @@ class FieldFactory
     public static function forDatafield(string $fieldName, string $label): Field
     {
         return new DataField($fieldName, $label);
+    }
+
+    /**
+     * Select the value of of the first non empty query field.
+     *
+     * @param array<string> $queryFieldNames Names of query fields to try to get a value from
+     * @param string $label
+     * @return Field
+     */
+    public static function alternatives(array $queryFieldNames, string $label): Field
+    {
+        return new AlternativesField($queryFieldNames, $label);
     }
 
     /**

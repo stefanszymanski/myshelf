@@ -120,10 +120,14 @@ class Book extends AbstractSchema
             'title' => QueryFieldFactory::forDatafield('title', label: 'Title'),
             'language' => QueryFieldFactory::forDatafield('language', label: 'Language'),
             'origlanguage' => QueryFieldFactory::forDatafield('origlanguage', label: 'Original Language'),
-            'authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
-            'translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
-            'illustrators' => QueryFieldFactory::forDatafield('persons.illustrators', label: 'Illustrators'),
-            'editors' => QueryFieldFactory::forDatafield('persons.editors', label: 'Editors'),
+            'persons.authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
+            'person.translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
+            'person.illustrators' => QueryFieldFactory::forDatafield('persons.illustrators', label: 'Illustrators'),
+            'person.editors' => QueryFieldFactory::forDatafield('persons.editors', label: 'Editors'),
+            'authors' => QueryFieldFactory::alternatives(['persons.authors', 'content:persons.authors'], label: 'Authors'),
+            'translators' => QueryFieldFactory::alternatives(['persons.translators', 'content:persons.translators'], label: 'Translators'),
+            'illustrators' => QueryFieldFactory::alternatives(['persons.illustrators', 'content:persons.illustrators'], label: 'Illustrators'),
+            'editors' => QueryFieldFactory::alternatives(['persons.editors', 'content:persons.editors'], label: 'Editors'),
             // TODO add query field: reference count, e.g. number of authors
             /* 'authors._count' => QueryFieldFactory::count('authors', label: 'Authors #'), */
             'published' => QueryFieldFactory::forDatafield('published', label: 'Published'),

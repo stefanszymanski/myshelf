@@ -23,19 +23,19 @@ interface Field
     public function modifyQuery(QueryBuilder $qb, string $alias, ?string $queryFieldPath, Database $db, Table $table): QueryBuilder;
 
     /**
-     * Get a sub field.
+     * Modify the query result.
      *
-     * @param string $queryFieldName
-     * @param Database $db
-     * @param Table $table
-     * @return Field
+     * @param array<record> $result
+     * @param string $alias
+     * @param string|null $queryFieldPath
+     * @return array<record>
      */
-    public function getSubQueryField(string $queryFieldName, Database $db, Table $table): Field;
+    public function modifyResult(array $result, string $alias, ?string $queryFieldPath): array;
 
     /**
      * Get the field label.
      *
      * @return string
      */
-    public function getLabel(): string;
+    public function getLabel(string $alias, ?string $queryFieldPath, Database $db, Table $table): string;
 }

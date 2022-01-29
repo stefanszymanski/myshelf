@@ -20,9 +20,9 @@ abstract class AbstractField implements Field
     /**
      * {@inheritDoc}
      */
-    public function getSubQueryField(string $queryFieldName, Database $db, Table $table): Field
+    public function modifyResult(array $result, string $alias, ?string $queryFieldPath): array
     {
-        throw new \Exception('Sub fields are not supported by ' . self::class);
+        return $result;
     }
 
     /**
@@ -30,7 +30,7 @@ abstract class AbstractField implements Field
      *
      * @return string
      */
-    public function getLabel(?string $fieldName = null): string
+    public function getLabel(string $alias, ?string $queryFieldPath, Database $db, Table $table): string
     {
         return $this->label;
     }

@@ -144,21 +144,14 @@ class Table
     /**
      * Get the label for a query field by its name.
      *
-     * @param string $queryFieldName
+     * @param string $queryFieldPath
      * @return string
      */
-    public function getQueryFieldLabel(string $queryFieldName): string
+    public function getQueryFieldLabel(string $queryFieldPath): string
     {
-        $labelParts = [];
-        list($queryFieldName, $subQueryFieldName) = $this->splitQueryFieldPath($queryFieldName);
+        list($queryFieldName, $subQueryFieldPath) = $this->splitQueryFieldPath($queryFieldPath);
         $queryField = $this->getQueryField($queryFieldName);
-        $labelParts[] = $queryField->getLabel();
-        while ($subQueryFieldName) {
-            list($queryFieldName, $subQueryFieldName) = $this->splitQueryFieldPath($subQueryFieldName);
-            $queryField = $queryField->getSubQueryField($queryFieldName, $this->db, $this);
-            $labelParts[] = $queryField->getLabel();
-        }
-        return implode(' | ', $labelParts);
+        return $queryField->getLabel($queryFieldName, $subQueryFieldPath, $this->db, $this);
     }
 
     /**
@@ -252,7 +245,16 @@ class Table
         $qb->orderBy($orderBy);
         $qb->limit($limit);
         $qb->skip($offset);
-        return $qb->getQuery()->fetch();
+        $result = $qb->getQuery()->fetch();
+        foreach ($fields as $fieldName) {
+            $result = $this->modifyResultForField($result, $fieldName);
+        }
+        $fieldNames = array_flip($fields);
+        foreach ($result as &$record) {
+            $record = array_intersect_key($record, $fieldNames);
+            uksort($record, fn ($a, $b) => $fieldNames[$a] <=> $fieldNames[$b]);
+        }
+        return $result;
     }
 
     /**
@@ -283,14 +285,28 @@ class Table
      * Modify a query to include the given field.
      *
      * @param QueryBuilder $qb
-     * @param string $fieldPath
+     * @param string $queryFieldPath
      * @return QueryBuilder
      */
-    protected function modifyQueryForField(QueryBuilder $qb, string $fieldPath): QueryBuilder
+    public function modifyQueryForField(QueryBuilder $qb, string $queryFieldPath): QueryBuilder
     {
-        list($fieldName, $subFieldPath) = array_pad(explode(':', $fieldPath, 2), 2, null);
+        list($fieldName, $subFieldPath) = $this->splitQueryFieldPath($queryFieldPath);
         $field = $this->getQueryField($fieldName);
-        return $field->modifyQuery($qb, $fieldPath, $subFieldPath, $this->db, $this);
+        return $field->modifyQuery($qb, $queryFieldPath, $subFieldPath, $this->db, $this);
+    }
+
+    /**
+     * Modify the query result for a query field.
+     *
+     * @param array<record> $result
+     * @param string $queryFieldPath
+     * @return array<record>
+     */
+    protected function modifyResultForField(array $result, string $queryFieldPath): array
+    {
+        list($fieldName, $subFieldPath) = $this->splitQueryFieldPath($queryFieldPath);
+        $field = $this->getQueryField($fieldName);
+        return $field->modifyResult($result, $queryFieldPath, $subFieldPath);
     }
 
     /**

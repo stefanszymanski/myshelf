@@ -10,6 +10,7 @@ use App\Persistence\Database;
 use App\Persistence\Table;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use SleekDB\QueryBuilder;
 
 class DataField extends AbstractField
@@ -69,7 +70,27 @@ class DataField extends AbstractField
     /**
      * {@inheritDoc}
      */
-    public function getSubQueryField(string $queryFieldName, Database $db, Table $table): Field
+    public function getLabel(string $queryFieldName, ?string $queryFieldPath, Database $db, Table $table): string
+    {
+        if (!$queryFieldPath) {
+            return $this->label;
+        }
+        list($subQueryFieldName, $subQueryFieldPath) = array_pad(explode(':', $queryFieldPath, 2), 2, null);
+        return $this->label . ' | ' . $this
+            ->getSubQueryField($subQueryFieldName, $db, $table)
+            ->getLabel($subQueryFieldName, $subQueryFieldPath, $db, $table);
+    }
+
+    /**
+     * Get the QueryField instance for a sub field name.
+     *
+     * @param string $queryFieldName
+     * @param Database $db
+     * @param Table $table
+     * @return Field
+     * @throws InvalidArgumentException
+     */
+    protected function getSubQueryField(string $queryFieldName, Database $db, Table $table): Field
     {
         $dataField = $table->getDataField($this->dataFieldName);
         $isMultivalue = $dataField instanceof MultivalueFieldContract;
