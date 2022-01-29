@@ -45,9 +45,11 @@ Supported query fields and filters of the list command `./myshelf ls [table]` is
         -   [ ] via CLI
     -   [x] List
         -   [x] query specific fields
+        -   [x] query fields from referred records (e.g. the last name of the referred author of a book)
         -   [x] sorting
         -   [x] filters
         -   [x] grouping
+        -   [x] limit and offset
         -   [ ] different output formats (currently only fancy tables)
     -   [ ] Delete (wip)
     -   [ ] Display a single record (wip)
@@ -57,12 +59,12 @@ Supported query fields and filters of the list command `./myshelf ls [table]` is
     -   [x] Publishers
     -   [x] Books
         -   [x] Basic fields: title, publishing date, ISBN
-        -   [x] Associated persons: authors, editors
+        -   [x] Associated persons: authors, editors, illustrators, translators
         -   [x] Associated publisher
         -   [x] Binding (e.g. hardcover, paperback)
         -   [x] Acquiration data: date, vendor/person, condition
         -   [ ] Type of content (e.g. novel, nonfiction, drama etc)
-        -   [ ] Multiple contents (e.g. anthologies with multiple novels from different authors)
+        -   [x] Multiple contents (e.g. anthologies with multiple novels from different authors)
     -   [ ] Book lists (e.g. for grouping volumes of complete works)
     -   [ ] Tagging?
 -   [ ] User configuration (e.g. data storage directory, disabling specific features)
