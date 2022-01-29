@@ -107,6 +107,9 @@ class EditStructDialog extends Dialog
             }
         } while (!$exit);
 
+        // Remove undefined fields from the data.
+        $newStruct = array_intersect_key($newStruct, $this->field->getSubFields());
+
         $layer->finish();
         return $newStruct;
     }
