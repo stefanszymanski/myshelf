@@ -32,9 +32,9 @@ class Publisher extends AbstractSchema
         ]);
 
         $this->registerQueryFields([
-            'name' => QueryFieldFactory::datafield('name', label: 'Name'),
-            'shortname' => QueryFieldFactory::datafield('shortname', label: 'Short name'),
-            'books' => QueryFieldFactory::countReferences('book', 'publisher', label: 'Books'),
+            'name' => QueryFieldFactory::forDatafield('name', label: 'Name'),
+            'shortname' => QueryFieldFactory::forDatafield('shortname', label: 'Short name'),
+            /* 'books' => QueryFieldFactory::countReferences('book', 'publisher', label: 'Books'), */
         ]);
 
         $this->registerQueryFilters([

@@ -29,9 +29,9 @@ class Person extends AbstractSchema
 
         $this->registerQueryFields([
             // Data fields
-            'firstname' => QueryFieldFactory::datafield('firstname', label: 'First name'),
-            'lastname' => QueryFieldFactory::datafield('lastname', label: 'Last name'),
-            'nationality' => QueryFieldFactory::datafield('nationality', label: 'Nationality'),
+            'firstname' => QueryFieldFactory::forDatafield('firstname', label: 'First name'),
+            'lastname' => QueryFieldFactory::forDatafield('lastname', label: 'Last name'),
+            'nationality' => QueryFieldFactory::forDatafield('nationality', label: 'Nationality'),
             // Joined fields
             'name' => QueryFieldFactory::concat(', ', ['lastname', 'firstname'], label: 'Full name'),
             'name2' => QueryFieldFactory::concat(' ', ['firstname', 'lastname'], label: 'Full name'),

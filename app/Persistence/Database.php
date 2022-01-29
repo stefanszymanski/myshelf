@@ -19,6 +19,7 @@ class Database
         'person',
         'publisher',
         'book',
+        'work',
     ];
 
     /**
