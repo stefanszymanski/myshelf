@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Persistence;
 
+use App\Persistence\Schema\Book;
+use App\Persistence\Schema\BookList;
+use App\Persistence\Schema\Person;
+use App\Persistence\Schema\Publisher;
 use App\Persistence\Schema\Schema;
+use App\Persistence\Schema\Work;
 use LaravelZero\Framework\Application;
 use SleekDB\Store;
 
@@ -16,10 +21,11 @@ class Database
      * @var array<string>
      */
     public const TABLES = [
-        'person',
-        'publisher',
-        'book',
-        'work',
+        'person' => Person::class,
+        'publisher' => Publisher::class,
+        'book' => Book::class,
+        'work' => Work::class,
+        'booklist' => BookList::class,
     ];
 
     /**
@@ -79,7 +85,7 @@ class Database
      */
     public function getTable(string $name): Table
     {
-        if (!in_array($name, self::TABLES)) {
+        if (!isset(self::TABLES[$name])) {
             throw new \InvalidArgumentException("Table '$name' does not exist");
         }
         if (!isset($this->tables[$name])) {
@@ -120,7 +126,7 @@ class Database
      */
     protected function resolveSchema(string $name): Schema
     {
-        $className = sprintf('\\App\\Persistence\\Schema\\%s', ucfirst($name));
+        $className = self::TABLES[$name];
         if (!class_exists($className)) {
             throw new \InvalidArgumentException("Type '$className' does not exist");
         }
