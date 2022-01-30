@@ -22,18 +22,22 @@ class CreateRecordDialog extends Dialog
         $layer->update();
 
         $fields = $this->table->getDataFields();
-        $record = [];
+        $record = [
+            'data' => [],
+            'meta' => [],
+        ];
 
         // Ask for fields defined by the schema.
         foreach ($this->table->getNewRecordDialogFields() as $fieldName => $field) {
             $default = $defaults[$fieldName] ?? null;
             $value = $field->askForValue($this->context, $default);
-            $record[$fieldName] = $value;
+            $record['data'][$fieldName] = $value;
         }
 
         // Let the user edit the newly created record.
         $editDialog = new EditRecordDialog($this->context, $this->table);
         $record = $editDialog->render($record);
+        $record['meta']['created'] = time();
 
         $layer->finish();
         return $record;
