@@ -58,6 +58,13 @@ abstract class AbstractSchema implements Schema
     protected array $queryFilters = [];
 
     /**
+     * Label of the schema.
+     *
+     * @var string
+     */
+    protected ?string $label = null;
+
+    /**
      * @param string $tableName
      * @return void
      */
@@ -74,6 +81,14 @@ abstract class AbstractSchema implements Schema
      * Implement this method to define fields and filters.
      */
     abstract protected function configure(): void;
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getLabel(): string
+    {
+        return $this->label ?? ucfirst(collect(explode('\\', static::class))->last());
+    }
 
     /**
      * {@inheritDoc}
@@ -120,7 +135,9 @@ abstract class AbstractSchema implements Schema
         }
         $fieldName = collect($this->recordTitleFields)
             ->first(fn($fieldName) => isset($record['data'][$fieldName]) && !empty($record['data'][$fieldName]));
-        return $this->dataFields[$fieldName]->formatValue($record['data'][$fieldName]);
+        return $fieldName
+            ? $this->dataFields[$fieldName]->formatValue($record['data'][$fieldName])
+            : sprintf('<error>%s #%s</>', $this->getLabel(), $record['id'] ?? 'new');
     }
 
     /**

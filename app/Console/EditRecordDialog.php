@@ -31,7 +31,7 @@ class EditRecordDialog extends Dialog
         // Add a layer that prints the record table on each update.
         $layer = $this->context->addLayer(
             __('breadcrumb.editrecord', [
-                'table' => __(sprintf('schema.%s.label', $this->table->name)),
+                'table' => $this->table->getLabel(),
                 'record' => $this->table->getRecordTitle($record),
             ]),
             function () use (&$record, &$newRecord) {

@@ -16,7 +16,7 @@ class CreateRecordDialog extends Dialog
     {
         $layer = $this->context->addLayer(
             __('breadcrumb.createrecord', [
-                'table' => __(sprintf('schema.%s.label', $this->table->name)),
+                'table' => $this->table->getLabel(),
             ]),
         );
         $layer->update();

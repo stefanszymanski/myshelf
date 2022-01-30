@@ -12,6 +12,13 @@ use SleekDB\Store;
 interface Schema
 {
     /**
+     * Get the schema label.
+     *
+     * @return string
+     */
+    public function getLabel(): string;
+
+    /**
      * Get data fields.
      *
      * @return array<string, DataField>

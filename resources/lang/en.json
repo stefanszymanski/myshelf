@@ -1,10 +1,4 @@
 {
-    "schema.person.label": "Person",
-
-    "schema.publisher.label": "Publisher",
-
-    "schema.book.label": "Book",
-
     "breadcrumb.editrecord": "Edit :Table \":Record\"",
     "breadcrumb.createrecord": "Create :Table"
 }

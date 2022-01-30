@@ -32,6 +32,17 @@ class Table
     }
 
 
+    /**
+     * Get the table label.
+     *
+     * @return string
+     */
+    public function getLabel(): string
+    {
+        return $this->schema->getLabel();
+    }
+
+
     /* **************
      * Record methods
      * **************/
