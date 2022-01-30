@@ -12,7 +12,7 @@ class Publisher extends AbstractSchema
     /**
      * {@inheritDoc}
      */
-    protected array $recordTitleFields = ['shortname', 'name'];
+    protected array $recordTitleFields = ['fullname', 'shortname'];
 
     /**
      * {@inheritDoc}
@@ -22,23 +22,25 @@ class Publisher extends AbstractSchema
     /**
      * {@inheritDoc}
      */
-    protected array $newRecordDialogFields = ['name', 'shortname'];
+    protected array $newRecordDialogFields = ['fullname', 'shortname'];
 
     protected function configure(): void
     {
         $this->registerDataFields([
-            'name' => DataFieldFactory::string(label: 'Name', required: true),
+            'fullname' => DataFieldFactory::string(label: 'Full Name', required: true),
             'shortname' => DataFieldFactory::string(label: 'Short name')
         ]);
 
         $this->registerQueryFields([
-            'name' => QueryFieldFactory::forDatafield('name', label: 'Name'),
+            'fullname' => QueryFieldFactory::forDatafield('fullname', label: 'Full Name'),
             'shortname' => QueryFieldFactory::forDatafield('shortname', label: 'Short name'),
-            /* 'books' => QueryFieldFactory::countReferences('book', 'publisher', label: 'Books'), */
+            'name' => QueryFieldFactory::alternatives(['shortname', 'fullname'], 'Name'),
+            'books' => QueryFieldFactory::countReferences('book', 'published.publisher', label: 'Books'),
         ]);
 
         $this->registerQueryFilters([
             'name' => QueryFilterFactory::forField('name', equal: true, like: true),
+            'fullname' => QueryFilterFactory::forField('fullname', equal: true, like: true),
             'shortname' => QueryFilterFactory::forField('shortname', equal: true, like: true),
             'books' => QueryFilterFactory::forField('books', equal: true, unequal: true, gt: true, lt: true, gte: true, lte: true),
         ]);
@@ -50,12 +52,12 @@ class Publisher extends AbstractSchema
     public function getAutocompleteOptions(Store $store): array
     {
         $records = $store->createQueryBuilder()
-            ->select(['id', 'data.name'])
+            ->select(['id', 'data.fullname'])
             ->getQuery()
             ->fetch();
         $options = [];
         foreach ($records as $record) {
-            $options[$record['data']['name']] = $record['id'];
+            $options[$record['data']['fullname']] = $record['id'];
         }
         return $options;
     }
@@ -67,7 +69,7 @@ class Publisher extends AbstractSchema
     {
         return [
             'data' => [
-                'name' => $value,
+                'fullname' => $value,
             ],
         ];
     }
