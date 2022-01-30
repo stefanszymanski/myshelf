@@ -76,21 +76,21 @@ class DataField extends AbstractField
             return $this->label;
         }
         list($subQueryFieldName, $subQueryFieldPath) = array_pad(explode(':', $queryFieldPath, 2), 2, null);
-        return $this->label . ' | ' . $this
-            ->getSubQueryField($subQueryFieldName, $db, $table)
-            ->getLabel($subQueryFieldName, $subQueryFieldPath, $db, $table);
+        $foreignTable = $this->getForeignTable($queryFieldName, $db, $table);
+        $foreignField = $foreignTable->getQueryField($subQueryFieldName);
+        return $this->label . ' | ' . $foreignField->getLabel($subQueryFieldName, $subQueryFieldPath, $db, $foreignTable);
     }
 
     /**
-     * Get the QueryField instance for a sub field name.
+     * Get the foreign table of a reference data field.
      *
      * @param string $queryFieldName
      * @param Database $db
-     * @param Table $table
-     * @return Field
+     * @param Table $table The current table
+     * @return Table
      * @throws InvalidArgumentException
      */
-    protected function getSubQueryField(string $queryFieldName, Database $db, Table $table): Field
+    protected function getForeignTable(string $queryFieldName, Database $db, Table $table): Table
     {
         $dataField = $table->getDataField($this->dataFieldName);
         $isMultivalue = $dataField instanceof MultivalueFieldContract;
@@ -100,7 +100,6 @@ class DataField extends AbstractField
         if (!($dataField instanceof ReferenceFieldContract)) {
             throw new \InvalidArgumentException('Query Sub Fields are only allowed for references');
         }
-        $foreignTable = $db->getTable($dataField->getReferredTableName());
-        return $foreignTable->getQueryField($queryFieldName);
+        return $db->getTable($dataField->getReferredTableName());
     }
 }
