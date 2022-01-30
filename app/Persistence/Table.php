@@ -6,7 +6,8 @@ namespace App\Persistence;
 
 use App\Persistence\Data\ContainerFieldContract;
 use App\Persistence\Data\Field as DataField;
-use App\Persistence\Data\References;
+use App\Persistence\Data\MultivalueFieldContract;
+use App\Persistence\Data\ReferenceFieldContract;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Schema\Schema;
@@ -17,6 +18,11 @@ use SleekDB\Store;
 
 class Table
 {
+    /**
+     * @var array<string,array{string,bool}>|null
+     */
+    private ?array $references = null;
+
     /**
      * @param Database $db
      * @param Schema $schema
@@ -341,61 +347,83 @@ class Table
      * *************************/
 
     /**
-     * @return References
-     */
-    public function getReferences(): References
-    {
-        $references = new References;
-        foreach ($this->schema->getDataFields() as $fieldName => $field) {
-            $subReferences = $field->getReferences();
-            $subReferences->indent($fieldName);
-            $references->merge($subReferences);
-        }
-        return $references;
-    }
-
-    /**
-     * Find records referring the specified record
+     * Get reference information about the table.
      *
-     * @param int $id Key of the references record
-     * @return array<string,array<string,mixed>> Key is {type}.{field}, value is the referring record
+     * @return array<string,array{string,bool}> Keys are data field paths, values are tuples of the target table name
      */
-    public function findReferringRecords(int $id): array
+    public function getReferences(): array
     {
-        $records = [];
-        $references = $this->findReferences($this->name);
-        foreach ($references as list($referringTableName, $referringFieldName)) {
-            $referringStore = $this->db->getTable($referringTableName)->store;
-            // TODO determine the operator and field name without string functions
-            // TODO handle list structs, e.g. "content.*.authors.*"
-            $operator = str_ends_with($referringFieldName, '.*')
-                ? 'CONTAINS'
-                : '=';
-            $referringFieldName = substr($referringFieldName, 0, -2);
-            $referringRecords = $referringStore->findBy([$referringFieldName, $operator, $id]);
-            if (!empty($referringRecords)) {
-                $records[sprintf('%s.%s', $referringTableName, $referringFieldName)] = $referringRecords;
-            }
+        if ($this->references === null) {
+            $this->references = $this->createReferencesMap($this->getDataFields());
         }
-        return $records;
+        return $this->references;
     }
 
     /**
-     * @param string $targetTableName
-     * @return array<array{string,string}> List of tuples of referring table and field name
+     * Find records that reference the given ID.
+     *
+     * The return value is a list of table names with a list of field names with a list of record IDs.
+     *
+     * Example output:
+     *   [
+     *     'book' => [
+     *       'persons.author' => [2,6,7,19],
+     *       'persons.editor' => [37],
+     *     ],
+     *     'work' => [
+     *       'persons.authors' => [12,13,14,15]
+     *     ]
+     *   ]
+     *
+     * @param int $referredRecordId
+     * @return array<string,array<string,array<int>>> Pattern: array<tableName,array<fieldPath,recordId[]>>
      */
-    private function findReferences(string $targetTableName): array
+    public function findReferringRecords(int $referredRecordId): array
     {
-        $references = [];
-        foreach ($this->db->getTables() as $originTable) {
-            $originReferences = $originTable->getReferences();
-            foreach ($originReferences->get() as $originFieldName => list($referenceTableName, $fieldPath)) {
-                if ($referenceTableName === $targetTableName) {
-                    $references[] = [$originTable->name, $fieldPath];
+        return collect($this->db->getTables())
+            ->map(function (Table $table) use ($referredRecordId) {
+                return collect($table->getReferences())
+                    ->map(function (array $reference, string $fieldName) use ($referredRecordId, $table) {
+                        list($referredTableName, $isMultivalue) = $reference;
+                        if ($referredTableName != $this->name) {
+                            return null;
+                        }
+                        $operator = $isMultivalue ? 'CONTAINS' : '=';
+                        $referringRecords = $table->store->findBy(["data.$fieldName", $operator, $referredRecordId]);
+                        return array_column($referringRecords, 'id');
+                    })
+                    ->filter()
+                    ->all();
+            })
+            ->filter()
+            ->all();
+    }
+
+    /**
+     * Create reference information for the given data fields.
+     *
+     * @param array<string,DataField> $dataFields
+     * @return array<string,array{string,bool}> Keys are data field paths, values are tuples of the target table name
+     *                                          and whether it's a multivalue field
+     */
+    private static function createReferencesMap(array $dataFields): array
+    {
+        return collect($dataFields)
+            ->reduceWithKeys(function ($result, $field, $fieldName) {
+                if ($field instanceof ReferenceFieldContract) {
+                    $result[$fieldName] = [$field->getReferredTableName(), false];
                 }
-            }
-        }
-        return $references;
+                if ($field instanceof MultivalueFieldContract && $field->getField() instanceof ReferenceFieldContract) {
+                    $result[$fieldName] = [$field->getField()->getReferredTableName(), true];
+                }
+                if ($field instanceof ContainerFieldContract) {
+                    $subResult = collect(self::createReferencesMap($field->getSubFields()))
+                        ->mapWithKeys(fn ($subReference, $subFieldName) => ["$fieldName.$subFieldName" => $subReference])
+                        ->all();
+                    $result = array_merge($result, $subResult);
+                }
+                return $result;
+            }, []);
     }
 
 

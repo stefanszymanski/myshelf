@@ -44,20 +44,34 @@ class DeleteRecordsDialog extends Dialog
         }
 
         foreach ($ids as $id) {
-            $_referringRecords = $referringRecords[$id] ?? null;
-            if (!$_referringRecords) {
+            if (!isset($referringRecords[$id])) {
                 /* $this->output->info("No referring records for '$key'"); */
                 continue;
             }
-            foreach ($_referringRecords as $fieldName => $__referringRecords) {
-                $this->warning("There are referring records for #$id on field '$fieldName'");
-                // TODO render a table of found records as in ListCommand, using the default query fields
-                //      but Table::find() cannot be used to search by IDs, yet.
-                var_dump($__referringRecords);
-                /* $this->context->enqueue(fn () => $this->output->table(['ID'], $__referringRecords)); */
-            }
-            $this->error('No records were deleted due to referring records');
+            $statistics = collect($referringRecords[$id])
+                ->map(
+                    fn ($records) => collect($records)
+                        ->map(fn ($ids) => count($ids))
+                        ->sum()
+                )
+                ->map(fn ($count, $tableName) => sprintf(
+                    '%s from %s',
+                    $count,
+                    $this->db->getTable($tableName)->getLabel()
+                ))
+                ->implode(', ');
+            $this->warning(sprintf(
+                'There are referring records for %s #%s on following tables: %s',
+                $this->table->getLabel(),
+                $id,
+                $statistics,
+            ));
+            // TODO render a table of found records as in ListCommand, using the default query fields
+            //      but Table::find() cannot be used to search by IDs, yet.
+            /* $this->context->enqueue(fn () => $this->output->table(['ID'], $__referringRecords)); */
         }
+        $this->error('No records were deleted due to referring records');
+
         return [];
     }
 
@@ -65,17 +79,13 @@ class DeleteRecordsDialog extends Dialog
      * Determine referring records for the given record keys.
      *
      * @param array<int> $ids
-     * @return array<int,array<array<string,mixed>>> Keys are record keys, values are lists of their referring records
+     * @return array<int,array<string,array<string,array<int>>>>
      */
     protected function getReferringRecords(array $ids): array
     {
-        $records = [];
-        foreach ($ids as $id) {
-            $_records = $this->table->findReferringRecords($id);
-            if (!empty($_records)) {
-                $records[$id] = $_records;
-            }
-        }
-        return $records;
+        return collect($ids)
+            ->mapWithKeys(fn ($id) => [$id => $this->table->findReferringRecords($id)])
+            ->filter()
+            ->all();
     }
 }
