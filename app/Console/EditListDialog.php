@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Console;
 
 use App\Context;
-use App\Persistence\Data\ListField;
+use App\Persistence\Data\Field;
+use App\Persistence\Data\MultivalueFieldContract;
 use App\Validator\IntegerValidator;
 
 class EditListDialog extends Dialog
 {
-    protected ListField $field;
+    protected Field&MultivalueFieldContract $field;
 
     public function __construct(protected Context $context)
     {
@@ -24,7 +25,7 @@ class EditListDialog extends Dialog
      * @param array<string> $values
      * @return array<string>
      */
-    public function render(ListField $field, array $values): array
+    public function render(Field&MultivalueFieldContract $field, array $values): array
     {
         $this->field = $field;
         $elements = array_map(fn ($answer) => [$answer, $answer], $values);
@@ -224,7 +225,7 @@ class EditListDialog extends Dialog
      */
     protected function addToList(array $list): array
     {
-        $newValue = $this->field->field->askForValue($this->context, null);
+        $newValue = $this->field->getField()->askForValue($this->context, null);
         if ($newValue) {
             if (!in_array($newValue, array_column($list, 1))) {
                 if (in_array($newValue, array_column($list, 0))) {
