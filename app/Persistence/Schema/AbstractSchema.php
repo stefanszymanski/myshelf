@@ -9,10 +9,10 @@ use App\Persistence\Query\FilterFactory as QueryFilterFactory;
 use App\Persistence\Query\Field as QueryField;
 use App\Persistence\Query\Filter as QueryFilter;
 use App\Persistence\Table;
+use InvalidArgumentException;
 
 abstract class AbstractSchema implements Schema
 {
-
     /**
      * Data fields to create a records title from.
      *
