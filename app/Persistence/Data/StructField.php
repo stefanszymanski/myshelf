@@ -35,7 +35,7 @@ class StructField extends AbstractField implements ContainerFieldContract
             return '';
         }
         if (!is_array($value)) {
-            return sprintf('<bg=red>%s</>', RecordUtility::convertToString($value));
+            return sprintf('<error>%s</>', RecordUtility::convertToString($value));
         }
         if ($this->formatter) {
             return ($this->formatter)($value, $this->fields);
@@ -45,8 +45,8 @@ class StructField extends AbstractField implements ContainerFieldContract
             (function ($key, $value) {
                 $field = $this->fields[$key] ?? null;
                 return $field
-                    ? sprintf('<info>%s:</info> %s', $field->getLabel(), $field->formatValue($value))
-                    : "<bg=red>$key: $value</>";
+                    ? sprintf('<thead>%s:</> %s', $field->getLabel(), $field->formatValue($value))
+                    : "<error>$key: $value</>";
             })->bindTo($this),
             array_keys($value),
             array_values($value)

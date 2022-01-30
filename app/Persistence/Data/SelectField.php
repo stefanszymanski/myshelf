@@ -30,8 +30,7 @@ class SelectField extends AbstractField
         return match (true) {
             empty($value) => '',
             array_key_exists($value, $this->options) => $this->options[$value],
-            // TODO localization
-            default => sprintf('<bg=red>invalid: %s</>', $value)
+            default => sprintf('<error>%s</>', $value)
         };
     }
 

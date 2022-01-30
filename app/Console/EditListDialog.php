@@ -175,9 +175,9 @@ class EditListDialog extends Dialog
             list($old, $new) = $list[$i];
             $format = match (true) {
                 $old === $new => '%1$s',
-                $old !== null && $new === null => '<fg=red>%1$s</>',
-                $old === null && $new !== null => '<fg=green>%2$s</>',
-                $old !== $new => '<fg=red>%1$s</> <fg=green>%2$s</>',
+                $old !== null && $new === null => '<removed>%1$s</>',
+                $old === null && $new !== null => '<added>%2$s</>',
+                $old !== $new => '<removed>%1$s</> <added>%2$s</>',
                 default => throw new \UnexpectedValueException('This should not happen'),
             };
             $rows[] = [

@@ -32,7 +32,7 @@ class ReferenceField extends AbstractField implements ReferenceFieldContract
         try {
             return app(Database::class)->getTable($this->targetTable)->getRecordTitle($value);
         } catch (\Throwable $e) {
-            return sprintf('<bg=red>%s</>', $value);
+            return sprintf('<error>%s</>', $value);
         }
     }
 

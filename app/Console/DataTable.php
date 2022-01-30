@@ -213,9 +213,9 @@ class DataTable
         // TODO highlight changed elements in multivalue fields, e.g. in multireference fields
         $format = match (true) {
             $value === $newValue => '%s',
-            empty($value) && !empty($newValue) => '<fg=green>%s</>',
-            !empty($value) && empty($newValue) => '<fg=red>empty</>', // TODO find a better way to highlight cleared fields
-            $value !== $newValue => '<fg=yellow>%s</>',
+            empty($value) && !empty($newValue) => '<added>%s</>',
+            !empty($value) && empty($newValue) => '<removed>deleted</>',
+            $value !== $newValue => '<changed>%s</>',
             default => throw new \UnexpectedValueException('This should not happen'),
         };
         return sprintf($format, $newValue);
@@ -237,7 +237,7 @@ class DataTable
                 fn ($row) => is_array($row)
                     ? [
                         ...array_slice($row, 0, $highlightColumn),
-                        sprintf('<info>%s</info>', $row[$highlightColumn]),
+                        sprintf('<thead>%s</>', $row[$highlightColumn]),
                         ...array_slice($row, $highlightColumn + 1)
                     ]
                     : $row,
@@ -245,9 +245,10 @@ class DataTable
             );
         }
         $table = new SymfonyTable($this->output);
+        $table->setStyle('box');
+        $table->getStyle()->setCellHeaderFormat('<thead>%s</>');
         $table->setHeaders($headers);
         $table->setRows($rows);
-        $table->setStyle('box');
         $table->render();
     }
 }

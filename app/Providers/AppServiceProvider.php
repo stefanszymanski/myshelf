@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Persistence\Database;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -12,9 +14,14 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(OutputInterface $output)
     {
-        //
+        $formatter = $output->getFormatter();
+        $formatter->setStyle('thead', new OutputFormatterStyle(foreground: 'yellow'));
+        $formatter->setStyle('tgroup', new OutputFormatterStyle(foreground: 'green'));
+        $formatter->setStyle('added', new OutputFormatterStyle(foreground: 'green'));
+        $formatter->setStyle('deleted', new OutputFormatterStyle(foreground: 'red'));
+        $formatter->setStyle('changed', new OutputFormatterStyle(foreground: 'yellow'));
     }
 
     /**

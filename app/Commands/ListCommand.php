@@ -188,7 +188,7 @@ class ListCommand extends Command
         $table = new ConsoleTable($this->output);
         $table->setHeaders($headers);
         $table->setStyle('box');
-        $table->getStyle()->setCellHeaderFormat('<comment>%s</comment>');
+        $table->getStyle()->setCellHeaderFormat('<thead>%s</>');
         $rows = $groupBy
             ? $this->createGroupedTableRows($records, $groupBy, $hiddenFields)
             : $records;
@@ -229,7 +229,7 @@ class ListCommand extends Command
                 // Don't add a separator before the first group headline.
                 $rows[] = $separator;
             }
-            $rows[] = [new TableCell("<info>$groupValue</info>", ['colspan' => $colspan])];
+            $rows[] = [new TableCell("<tgroup>$groupValue</>", ['colspan' => $colspan])];
             $rows[] = $separator;
             $rows = array_merge($rows, $_rows);
             $groupCounter++;
