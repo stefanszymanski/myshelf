@@ -99,11 +99,14 @@ class Database
     /**
      * Get all tables.
      *
-     * @return array<Table>
+     * @return array<string,Table>
      */
     public function getTables(): array
     {
-        return array_map(fn($tableName) => $this->getTable($tableName), self::TABLES);
+        return collect(self::TABLES)
+            ->keys()
+            ->mapWithKeys(fn($name) => [$name => $this->getTable($name)])
+            ->all();
     }
 
     /**
