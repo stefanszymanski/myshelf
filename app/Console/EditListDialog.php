@@ -8,6 +8,7 @@ use App\Context;
 use App\Persistence\Data\Field;
 use App\Persistence\Data\MultivalueFieldContract;
 use App\Validator\IntegerValidator;
+use Symfony\Component\Console\Helper\Table as SymfonyTable;
 
 class EditListDialog extends Dialog
 {
@@ -33,7 +34,7 @@ class EditListDialog extends Dialog
         // Add a layer that prints the elements list on each update.
         $layer = $this->context->addLayer(
             sprintf('Edit list "%s"', $this->field->getLabel()),
-            function() use (&$elements) {
+            function () use (&$elements) {
                 $this->displayList($elements);
             },
         );
@@ -167,10 +168,6 @@ class EditListDialog extends Dialog
      */
     protected function displayList(array $list): void
     {
-        // TODO render a prettier table
-        // TODO display headlines in blue, not only here but everywhere.
-        //      The default green should only be used for indicating new values
-        //      Or maybe another color than blue?
         $rows = [];
         for ($i = 0; $i < sizeof($list); $i++) {
             list($old, $new) = $list[$i];
@@ -186,7 +183,12 @@ class EditListDialog extends Dialog
                 sprintf($format, $this->field->formatValue($old), $this->field->formatValue($new))
             ];
         }
-        $this->output->table(['#', 'Values'], $rows);
+        $table = new SymfonyTable($this->output);
+        $table->setStyle('box');
+        $table->getStyle()->setCellHeaderFormat('<thead>%s</>');
+        $table->setHeaders(['#', 'Items']);
+        $table->setRows($rows);
+        $table->render();
     }
 
     /**
@@ -197,10 +199,10 @@ class EditListDialog extends Dialog
      */
     protected function resetList(array $list): array
     {
-        return array_map(
-            fn ($element) => [$element[0], $element[0]],
-            array_filter($list, fn ($element) => $element[0] !== null)
-        );
+        return collect($list)
+            ->filter(fn ($element) => $element[0] !== null)
+            ->map(fn($element) => [$element[0], $element[0]])
+            ->all();
     }
 
     /**
@@ -211,10 +213,10 @@ class EditListDialog extends Dialog
      */
     protected function clearList(array $list): array
     {
-        return array_map(
-            fn ($element) => [$element[0], null],
-            array_filter($list, fn ($element) => $element[0] !== null)
-        );
+        return collect($list)
+            ->filter(fn ($element) => $element[0] !== null)
+            ->map(fn($element) => [$element[0], null])
+            ->all();
     }
 
     /**

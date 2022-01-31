@@ -6,6 +6,11 @@ namespace App\Persistence\Data;
 
 interface MultivalueFieldContract
 {
+    /**
+     * Get the data field for an element.
+     *
+     * @return Field
+     */
     public function getField(): Field;
 
     /**

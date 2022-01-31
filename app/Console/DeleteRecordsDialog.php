@@ -33,9 +33,7 @@ class DeleteRecordsDialog extends Dialog
             $this->output->listing($ids);
             $confirmed = $this->output->confirm('Do you really want to delete them?', false);
             if ($confirmed) {
-                foreach (array_keys($ids) as $id) {
-                    $this->table->store->deleteById($id);
-                }
+                array_walk($ids, $this->table->store->deleteById(...));
                 $this->success('Record(s) deleted');
                 return $ids;
             } else {
