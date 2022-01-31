@@ -12,12 +12,12 @@ class ListField extends AbstractField implements MultivalueFieldContract
 {
     /**
      * @param Field $field
-     * @param bool $sortable
+     * @param bool $isSortable
      * @param Validator $validator
      */
     public function __construct(
         protected readonly Field $field,
-        public readonly bool $sortable,
+        protected readonly bool $isSortable,
         protected readonly Validator $validator,
     ) {
     }
@@ -36,6 +36,14 @@ class ListField extends AbstractField implements MultivalueFieldContract
     public function getField(): Field
     {
         return $this->field;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isSortable(): bool
+    {
+        return $this->isSortable;
     }
 
     /**

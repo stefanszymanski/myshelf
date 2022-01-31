@@ -43,7 +43,7 @@ class EditListDialog extends Dialog
 
             // Update the layer and ask for an action.
             $layer->update();
-            $actions = $this->field->sortable
+            $actions = $this->field->isSortable()
                 ? '[#,s#,d#,r#,a,d!,r!,w,q,q!,?]'
                 : '[#,d#,r#,a,d!,r!,w,q,q!,?]';
             $action = $this->output->ask("Enter action $actions");
@@ -108,7 +108,7 @@ class EditListDialog extends Dialog
                             $elements = $this->editElement($elements, $elementNumber);
                             break;
                         case 's':
-                            if ($this->field->sortable) {
+                            if ($this->field->isSortable()) {
                                 $elements = $this->sortElement($elements, $elementNumber);
                             } else {
                                 $this->error('Invalid action (the list is not sortable)');
@@ -151,7 +151,7 @@ class EditListDialog extends Dialog
             'q! - quit without saving',
             ' ? - print help',
         ];
-        if (!$this->field->sortable) {
+        if (!$this->field->isSortable()) {
             unset($lines[1]);
         }
         $this->context->enqueue(fn () => $this->output->text($lines));
