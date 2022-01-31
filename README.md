@@ -54,6 +54,7 @@ Supported query fields and filters of the list command `./myshelf ls [table]` is
     -   [ ] Delete (wip)
     -   [ ] Display a single record (wip)
     -   [ ] Display availabe query fields and filters for the list command (wip)
+    -   [ ] Display references between records
 -   [x] Datatypes
     -   [x] Persons (name, nationality)
     -   [x] Publishers
@@ -65,8 +66,9 @@ Supported query fields and filters of the list command `./myshelf ls [table]` is
         -   [x] Acquiration data: date, vendor/person, condition
         -   [ ] Type of content (e.g. novel, nonfiction, drama etc)
         -   [x] Multiple contents (e.g. anthologies with multiple novels from different authors)
-    -   [ ] Book lists (e.g. for grouping volumes of complete works)
-    -   [ ] Tagging?
+    -   [x] Book lists (e.g. for grouping volumes of complete works)
+    -   [ ] Activity Log (e.g. for tracking lent books, or keeping a reading list)
+    -   [ ] Tagging / Keywords (maybe)
 -   [ ] User configuration (e.g. data storage directory, disabling specific features)
 -   [ ] Data schema versioning to allow automatic and reliable updates of records when data types change
 -   [ ] ISBN barcode scanning via webcam (using [Zbar](http://zbar.sourceforge.net/))
