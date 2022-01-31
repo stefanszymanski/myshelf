@@ -29,12 +29,12 @@ class DescribeCommand extends Command
 
         // TODO rewrite table rendering
         $fields = $table->getQueryFields();
-        $info = array_map((function (QueryField $field, string $fieldName) {
-            return [
+        $info = collect($fields)
+            ->map(fn(QueryField $field, string $fieldName) => [
                 'name' => $fieldName,
-                'label' => $field->getLabel(),
-            ];
-        })->bindTo($this), array_values($fields), array_keys($fields));
+                'label' => $field->getLabel($fieldName, null, $this->db, $table),
+            ])
+            ->all();
         $this->output->writeln("\n  Table fields (usable with --fields, --orderby and --groupby)");
         $this->renderTable(['Name', 'Label'], $info);
 
@@ -53,8 +53,9 @@ class DescribeCommand extends Command
     protected function renderTable(array $headers, array $rows): void
     {
         $table = new Table($this->output);
-        $table->setHeaders($headers);
         $table->setStyle('box');
+        $table->getStyle()->setCellHeaderFormat('<thead>%s</>');
+        $table->setHeaders($headers);
         $table->setRows($rows);
         $table->render();
     }
@@ -89,14 +90,5 @@ class DescribeCommand extends Command
             $groupCounter++;
         }
         return $rows;
-    }
-
-    protected function getFieldTypeLabel(QueryFieldType $type): string
-    {
-        return match ($type) {
-            QueryFieldType::Real => 'Real fields',
-            QueryFieldType::Virtual => 'Virtual fields, made of values of the same table',
-            QueryFieldType::Joined => 'Virtual fields, taken from references on other tables',
-        };
     }
 }
