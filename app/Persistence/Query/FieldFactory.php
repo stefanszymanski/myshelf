@@ -46,6 +46,19 @@ class FieldFactory
     }
 
     /**
+     * Format both `language` and `origlanguage` field.
+     *
+     * This is specifically for the Schemas book and work.
+     *
+     * @param string $label
+     * @return Field
+     */
+    public static function languages(string $label): Field
+    {
+        return new LanguagesField($label);
+    }
+
+    /**
      * Count foreign references.
      *
      * @param string $tableName

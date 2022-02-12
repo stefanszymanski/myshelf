@@ -26,7 +26,7 @@ class Work extends AbstractSchema
         $this->registerDataFields([
             'title' => DataFieldFactory::string(label: 'Title', required: true),
             'language' => DataFieldFactory::select(Book::LANGUAGES, label: 'Language'),
-            'orig_language' => DataFieldFactory::select(Book::ORIGINAL_LANGUAGES, label: 'Original Language'),
+            'origlanguage' => DataFieldFactory::select(Book::ORIGINAL_LANGUAGES, label: 'Original Language'),
             'persons' => DataFieldFactory::struct(
                 label: 'Persons',
                 fields: [
@@ -53,8 +53,9 @@ class Work extends AbstractSchema
 
         $this->registerQueryFields([
             'title' => QueryFieldFactory::forDatafield('title', label: 'Title'),
-            'language' => QueryFieldFactory::forDatafield('language', label: 'Language'),
-            'origlanguage' => QueryFieldFactory::forDatafield('orig_language', label: 'Original Language'),
+            'worklanguage' => QueryFieldFactory::forDatafield('language', label: 'Language'),
+            'origlanguage' => QueryFieldFactory::forDatafield('origlanguage', label: 'Original Language'),
+            'language' => QueryFieldFactory::languages(label: 'Language'),
             'persons' => QueryFieldFactory::forDatafield('persons', label: 'Persons'),
             'persons.authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
             'persons.translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),

@@ -118,8 +118,12 @@ class Book extends AbstractSchema
         $this->registerQueryFields([
             // General information
             'title' => QueryFieldFactory::forDatafield('title', label: 'Title'),
-            'language' => QueryFieldFactory::forDatafield('language', label: 'Language'),
-            'origlanguage' => QueryFieldFactory::forDatafield('origlanguage', label: 'Original Language'),
+            'self.worklanguage' => QueryFieldFactory::forDatafield('language', label: 'Language'),
+            'self.origlanguage' => QueryFieldFactory::forDatafield('origlanguage', label: 'Original Language'),
+            'self.language' => QueryFieldFactory::languages(label: 'Language'),
+            'worklanguage' => QueryFieldFactory::alternatives(['self.worklanguage', 'content:worklanguage'], 'Language'),
+            'origlanguage' => QueryFieldFactory::alternatives(['self.origlanguage', 'content:origlanguage'], 'Original Language'),
+            'language' => QueryFieldFactory::alternatives(['self.language', 'content:language'], 'Language'),
             'persons.authors' => QueryFieldFactory::forDatafield('persons.authors', label: 'Authors'),
             'persons.translators' => QueryFieldFactory::forDatafield('persons.translators', label: 'Translators'),
             'persons.illustrators' => QueryFieldFactory::forDatafield('persons.illustrators', label: 'Illustrators'),
@@ -138,7 +142,6 @@ class Book extends AbstractSchema
             'isbn10' => QueryFieldFactory::forDatafield('isbn10', label: 'ISBN-10'),
             'isbn13' => QueryFieldFactory::forDatafield('isbn13', label: 'ISBN-13'),
             'content' => QueryFieldFactory::forDatafield('content', label: 'Content'),
-            // TODO add query fields for book content
             // Information about a specific edition
             'binding' => QueryFieldFactory::forDatafield('binding', label: 'Binding'),
             'edition' => QueryFieldFactory::forDatafield('edition', label: 'Edition'),
@@ -154,6 +157,8 @@ class Book extends AbstractSchema
         $this->registerQueryFilters([
             // General information
             'title' => QueryFilterFactory::forField('title', equal: true, unequal: true, like: true),
+            'self.language' => QueryFilterFactory::forField('self.language', equal: true, unequal: true, like: true),
+            'self.origlanguage' => QueryFilterFactory::forField('self.origlanguage', equal: true, unequal: true, like: true),
             'language' => QueryFilterFactory::forField('language', equal: true, unequal: true, like: true),
             'origlanguage' => QueryFilterFactory::forField('origlanguage', equal: true, unequal: true, like: true),
             'persons.author' => QueryFilterFactory::forReference('persons.authors', 'person', isMultivalue: true),
