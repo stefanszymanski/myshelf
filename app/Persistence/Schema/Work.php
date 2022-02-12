@@ -106,15 +106,11 @@ class Work extends AbstractSchema
      */
     public function getAutocompleteOptions(Store $store): array
     {
-        $records = $store->createQueryBuilder()
-            ->select(['key', 'data.title'])
-            ->getQuery()
-            ->fetch();
-        $options = [];
-        foreach ($records as $record) {
-            $options[$record['data']['title']] = $record['id'];
-        }
-        return $options;
+        // TODO use title and first person name as in record title
+        //      currently there are a lot methods that need to get passed Table and Database to. Thats crap. I should refactor.
+        return collect($store->findAll())
+            ->mapWithKeys(fn($record) => [$record['data']['title'] => $record['id']])
+            ->all();
     }
 
     /**

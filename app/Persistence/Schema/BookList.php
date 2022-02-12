@@ -47,15 +47,9 @@ class BookList extends AbstractSchema
      */
     public function getAutocompleteOptions(Store $store): array
     {
-        $records = $store->createQueryBuilder()
-            ->select(['data.name'])
-            ->getQuery()
-            ->fetch();
-        $options = [];
-        foreach ($records as $record) {
-            $options[$record['data']['name']] = $record['data']['id'];
-        }
-        return $options;
+        return collect($store->findAll())
+            ->mapWithKeys(fn($record) => [$record['data']['name'] ?? null => $record['id']])
+            ->all();
     }
 
     /**

@@ -51,15 +51,9 @@ class Publisher extends AbstractSchema
      */
     public function getAutocompleteOptions(Store $store): array
     {
-        $records = $store->createQueryBuilder()
-            ->select(['id', 'data.fullname'])
-            ->getQuery()
-            ->fetch();
-        $options = [];
-        foreach ($records as $record) {
-            $options[$record['data']['fullname']] = $record['id'];
-        }
-        return $options;
+        return collect($store->findAll())
+            ->mapWithKeys(fn($record) => [$record['data']['fullname'] ?? null => $record['id']])
+            ->all();
     }
 
     /**

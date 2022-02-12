@@ -68,16 +68,15 @@ class Person extends AbstractSchema
      */
     public function getAutocompleteOptions(Store $store): array
     {
-        $records = $store->createQueryBuilder()
-            ->select(['id', 'data'])
-            ->getQuery()
-            ->fetch();
-        $options = [];
-        foreach ($records as $record) {
-            $options["{$record['data']['firstname']} {$record['data']['lastname']}"] = $record['id'];
-            $options["{$record['data']['lastname']}, {$record['data']['firstname']}"] = $record['id'];
-        }
-        return $options;
+        return collect($store->findAll())
+            ->reduce(fn($options, $record) => array_merge(
+                $options,
+                [
+                    ["{$record['data']['firstname']} {$record['data']['lastname']}" => $record['id']],
+                    ["{$record['data']['lastname']}, {$record['data']['firstname']}" => $record['id']],
+                ]
+            ))
+            ->all();
     }
 
     /**
